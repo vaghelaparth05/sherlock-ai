@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock.ai demo</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#ffffff; --line:#e2dfd6; --text:#1f1f1c; --muted:#6a6860;
+    --accent:#2b59c3; --accent-bg:#e8eefb;
+    --green:#1f7a45; --green-bg:#e4f3ea;
+    --amber:#8a5600; --amber-bg:#fdf0d4;
+    --red:#a02828; --red-bg:#fae3e3;
+    --grey:#55534d; --grey-bg:#eceae3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+  header h1{font-size:20px;margin:0}
+  header span{color:var(--muted);font-size:13px}
+  .banner{background:var(--amber-bg);color:var(--amber);font-size:13px;padding:6px 24px;border-bottom:1px solid var(--line)}
+  nav{display:flex;gap:8px;padding:16px 24px 0;flex-wrap:wrap;max-width:1040px;margin:0 auto}
+  nav button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 14px;font-size:13px;color:var(--muted);cursor:pointer}
+  nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  nav button.done{color:var(--text)}
+  nav button:disabled{opacity:.45;cursor:not-allowed}
+  main{max-width:1040px;margin:0 auto;padding:16px 24px 64px}
+  h2{font-size:20px;margin:8px 0 4px}
+  p{margin:6px 0}
+  .muted{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .explain{background:var(--accent-bg);border:1px solid #c9d6f5;border-radius:12px;padding:12px 16px;margin:14px 0;font-size:14px}
+  .explain b{display:block;margin-bottom:2px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr.click{cursor:pointer}
+  tr.click:hover td{background:#faf9f6}
+  .pill{display:inline-block;border-radius:12px;padding:1px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+  .pill.green{background:var(--green-bg);color:var(--green)}
+  .pill.amber{background:var(--amber-bg);color:var(--amber)}
+  .pill.red{background:var(--red-bg);color:var(--red)}
+  .pill.grey{background:var(--grey-bg);color:var(--grey)}
+  .pill.blue{background:var(--accent-bg);color:var(--accent)}
+  button.primary{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button.primary:hover{background:#244aa3}
+  button.ghost{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  button.ghost:hover{background:#faf9f6}
+  button.good{background:var(--green);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer}
+  button.bad{background:var(--card);color:var(--red);border:1px solid #e3b4b4;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat .n{font-size:26px;font-weight:700;line-height:1.1}
+  .stat .l{font-size:12px;color:var(--muted)}
+  .bar{height:10px;border-radius:5px;background:var(--grey-bg);overflow:hidden;margin:12px 0}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+  .quote{border-left:3px solid var(--line);padding:4px 12px;margin:6px 0;background:#faf9f6;font-size:14px}
+  .quote small{display:block;color:var(--muted);font-size:12px}
+  mark{background:#ffe8a3;padding:0 2px;border-radius:3px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:700px){.two{grid-template-columns:1fr}}
+  .proposal.decided{opacity:.8}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .detail td{background:#faf9f6}
+  ul.tight{margin:6px 0;padding-left:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sherlock.ai</h1>
+  <span>An investigator for document collections: where information came from, and what it affects</span>
+</header>
+<div class="banner">Demo only. Everything here is hard-coded sample data, there is no AI behind it yet. It shows how the finished product would look and behave.</div>
+<nav id="steps"></nav>
+<main id="app"></main>
+
+<script>
+/* ---------- Hard-coded sample data ---------- */
+const DOCS = [
+  {id:'D1',  title:'Leave Policy v2',          source:'HR Policy Office',      year:2022, text:'Full-time staff are entitled to 20 days of annual leave each year. Unused leave may be carried over to a maximum of 10 days.'},
+  {id:'D2',  title:'Staff Handbook 2022',      source:'Staff Handbook Team',   year:2022, text:'Annual leave: 20 days per year for full-time employees. Carry-over is capped at 10 days.'},
+  {id:'D3',  title:'Intranet leave FAQ',       source:'Intranet Team',         year:2023, text:'How much leave do I get? You get 20 days a year. Sick leave is 10 days per year.'},
+  {id:'D4',  title:'Onboarding pack',          source:'HR Policy Office',      year:2023, text:'Welcome! Full-time staff receive 20 days of annual leave.'},
+  {id:'D5',  title:'Manager guide',            source:'Staff Handbook Team',   year:2023, text:'Managers should approve up to 20 days of annual leave per person. Carry-over cap: 10 days.'},
+  {id:'D6',  title:'Annual report 2023',       source:'Corporate Affairs',     year:2023, text:'Staff are entitled to 20 days of annual leave.'},
+  {id:'D7',  title:'Casual staff guide',       source:'HR Policy Office',      year:2023, text:'Casual employees do not receive paid annual leave.'},
+  {id:'D8',  title:'Payroll manual',           source:'Payroll Office',        year:2024, text:'Sick leave accrues at 10 days per year.'},
+  {id:'D9',  title:'Budget paper 2024',        source:'Finance',               year:2024, text:'The annual leave liability is estimated at $2.4m, based on 20 days per full-time employee.'},
+  {id:'D10', title:'Training slides',          source:'Intranet Team',         year:2024, text:'Reminder: you have 20 days of annual leave.'},
+  {id:'D11', title:'Internal audit report',    source:'Internal Audit',        year:2024, text:'We confirmed payroll records show a sick leave entitlement of 10 days per year.'},
+  {id:'D12', title:'Regional office memo',     source:'Regional Office',       year:2024, text:'Part-time staff accrue 15 days of annual leave per year, pro rata.'},
+  {id:'D13', title:'Leave Policy v3 (signed)', source:'Executive Office',      year:2026, text:'From 1 July 2026, full-time staff are entitled to 25 days of annual leave each year. Carry-over remains capped at 10 days. Signed by the Secretary.'}
+];
+const doc = id => DOCS.find(d => d.id === id);
+
+const BASE_CLAIMS = [
+  {id:'K1', text:'Annual leave is 20 days (full-time staff)',         origin:'D1',  cited:['D1','D2','D3','D4','D5','D6','D10'], indep:['HR Policy Office']},
+  {id:'K2', text:'Leave carry-over is capped at 10 days',             origin:'D1',  cited:['D1','D2','D5'],                      indep:['HR Policy Office']},
+  {id:'K3', text:'Sick leave is 10 days per year',                    origin:'D8',  cited:['D3','D8','D11'],                     indep:['Payroll Office','Internal Audit']},
+  {id:'K4', text:'Casual staff receive no paid annual leave',         origin:'D7',  cited:['D7'],                                indep:['HR Policy Office']},
+  {id:'K5', text:'Part-time staff accrue 15 days of annual leave',    origin:'D12', cited:['D12'],                               indep:['Regional Office']},
+  {id:'K7', text:'Annual leave liability is $2.4m (based on 20 days)',origin:'D9',  cited:['D9'],                                indep:['Finance'], dependsOn:'K1'}
+];
+const NEW_CLAIM = {id:'K6', text:'Annual leave is 25 days (full-time staff)', origin:'D13', cited:['D13'], indep:['Executive Office']};
+
+const PROPOSALS = [
+  {id:'P1', kind:'Supersedes', cls:'blue', conf:94,
+   title:'Annual leave: 20 days is replaced by 25 days',
+   a:{doc:'D13', quote:'full-time staff are entitled to <mark>25 days</mark> of annual leave each year'},
+   b:{doc:'D1',  quote:'Full-time staff are entitled to <mark>20 days</mark> of annual leave each year'},
+   why:'Same subject (full-time annual leave), but the new document takes effect on 1 July 2026. The old figure was correct until then, so Sherlock calls it superseded, not false.',
+   yes:'Confirm: superseded', no:'Dismiss'},
+  {id:'P2', kind:'Corroborates', cls:'green', conf:91,
+   title:'Carry-over cap of 10 days is confirmed again',
+   a:{doc:'D13', quote:'Carry-over remains capped at <mark>10 days</mark>'},
+   b:{doc:'D1',  quote:'carried over to a maximum of <mark>10 days</mark>'},
+   why:'The Executive Office is a different source from the HR Policy Office, so this counts as independent support.',
+   yes:'Confirm: corroborated', no:'Dismiss'},
+  {id:'P3', kind:'Possible conflict', cls:'amber', conf:58,
+   title:'25 days versus 15 days of annual leave',
+   a:{doc:'D13', quote:'<mark>full-time</mark> staff are entitled to 25 days of annual leave'},
+   b:{doc:'D12', quote:'<mark>Part-time</mark> staff accrue 15 days of annual leave per year, pro rata'},
+   why:'Low confidence. The two numbers differ, but the claims may describe different staff types. Sherlock cannot be sure, so it asks you.',
+   yes:'Confirm: real conflict', no:'Dismiss: different subject'}
+];
+
+/* ---------- State ---------- */
+const S = {
+  step:1, maxStep:1,
+  busy:false, progress:0, msg:'',
+  analysed:false, d13:'none',
+  dec:{P1:null,P2:null,P3:null},
+  openClaim:null, openSource:null,
+  log:[], tampered:false, verifyMsg:null
+};
+
+/* ---------- Helpers ---------- */
+function hash(str){
+  let h = 2166136261;
+  for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h,16777619); }
+  return ('00000000'+(h>>>0).toString(16)).slice(-8);
+}
+function visibleDocs(){ return DOCS.filter(d => d.id !== 'D13' || S.d13 === 'done'); }
+function claims(){ return S.d13 === 'done' ? BASE_CLAIMS.concat([NEW_CLAIM]) : BASE_CLAIMS; }
+function indepNames(c){
+  const n = c.indep.slice();
+  if (c.id === 'K2' && S.dec.P2 === 'accepted') n.push('Executive Office');
+  return n;
+}
+function status(c){
+  const d = S.dec, up = S.d13 === 'done';
+  switch (c.id){
+    case 'K1': if (d.P1==='accepted') return ['Superseded','red']; if (up) return ['Under review','amber']; break;
+    case 'K2': if (d.P2==='accepted') return ['Corroborated','green']; if (up) return ['Under review','amber']; break;
+    case 'K3': return ['Corroborated','green'];
+    case 'K5': if (d.P3==='dismissed') return ['Reviewed: no conflict','green']; if (d.P3==='accepted') return ['Conflict confirmed','red']; if (up) return ['Under review','amber']; break;
+    case 'K6': if (d.P1==='accepted') return ['Current','green']; return ['New: under review','amber'];
+    case 'K7': if (d.P1==='accepted') return ['Affected: needs review','amber']; break;
+  }
+  return ['Single source','grey'];
+}
+function openFlags(){
+  let n = 0;
+  PROPOSALS.forEach(p => { if (S.d13==='done' && S.dec[p.id]===null) n++; });
+  return n;
+}
+function addLog(actor, action, detail){
+  const prev = S.log.length ? S.log[S.log.length-1].hash : '00000000';
+  const n = S.log.length + 1;
+  const mins = 9*60 + n*3;
+  const time = '13 Oct 2026, ' + String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
+  S.log.push({n, time, actor, action, detail, prev, hash: hash(prev + n + actor + action + detail)});
+}
+function pill(label, cls){ return '<span class="pill '+cls+'">'+label+'</span>'; }
+function explain(title, text){ return '<div class="explain"><b>'+title+'</b>'+text+'</div>'; }
+
+function run(msgs, ms, done){
+  S.busy = true; S.progress = 0; S.msg = msgs[0];
+  render();
+  let i = 0;
+  const total = msgs.length;
+  const t = setInterval(() => {
+    i++;
+    if (i >= total){ clearInterval(t); S.busy = false; S.progress = 100; done(); render(); return; }
+    S.progress = Math.round(i/total*100); S.msg = msgs[i]; render();
+  }, ms);
+}
+function go(step){ S.step = step; if (step > S.maxStep) S.maxStep = step; render(); window.scrollTo(0,0); }
+
+/* ---------- Screens ---------- */
+function stepUpload(){
+  const rows = DOCS.filter(d => d.id !== 'D13').map(d =>
+    '<tr><td class="mono">'+d.id+'</td><td>'+d.title+'</td><td>'+d.source+'</td><td>'+d.year+'</td><td class="mono">'+hash(d.text)+'</td></tr>').join('');
+  let action;
+  if (S.busy){
+    action = '<div class="card"><b>'+S.msg+'</b><div class="bar"><i style="width:'+S.progress+'%"></i></div></div>';
+  } else if (S.analysed){
+    action = '<div class="row"><span class="pill green">Analysis complete</span><button class="primary" data-a="go" data-v="2">See the summary</button></div>';
+  } else {
+    action = '<button class="primary" data-a="analyse">Analyse these 12 documents</button>';
+  }
+  return '<h2>1. Upload a collection</h2><p class="muted">A records team drops in documents about one topic. This sample set is about staff leave.</p>'
+    + explain('What is happening behind the scenes','Sherlock reads each file and stores a hash (a digital fingerprint) of the original. The files themselves are never changed. If anyone alters one later, its fingerprint stops matching.')
+    + '<div class="card"><table><thead><tr><th>ID</th><th>Document</th><th>Source</th><th>Year</th><th>Fingerprint</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    + action;
+}
+
+function stepSummary(){
+  const cl = claims();
+  const single = cl.filter(c => indepNames(c).length === 1).length;
+  const stats = '<div class="stats">'
+    + '<div class="stat"><div class="n">'+visibleDocs().length+'</div><div class="l">documents</div></div>'
+    + '<div class="stat"><div class="n">'+cl.length+'</div><div class="l">claims found</div></div>'
+    + '<div class="stat"><div class="n">'+sourceList().length+'</div><div class="l">sources</div></div>'
+    + '<div class="stat"><div class="n">'+single+'</div><div class="l">claims resting on one source</div></div>'
+    + '<div class="stat"><div class="n">'+openFlags()+'</div><div class="l">flags awaiting review</div></div>'
+    + '</div>';
+  const rows = cl.map(c => {
+    const st = status(c);
+    const open = S.openClaim === c.id;
+    let r = '<tr class="click" data-a="claim" data-v="'+c.id+'"><td>'+c.text+'</td><td>'+pill(st[0], st[1])+'</td><td>'+c.cited.length+' document'+(c.cited.length>1?'s':'')+'</td><td>'+indepNames(c).length+'</td></tr>';
+    if (open){
+      const o = doc(c.origin);
+      r += '<tr class="detail"><td colspan="4">'
+        + '<b>Traced to the earliest source:</b> '+o.title+' ('+o.source+', '+o.year+')'
+        + '<div class="quote">'+o.text+'<small>'+o.id+' · quoted from the original</small></div>'
+        + '<b>Documents that state it:</b><ul class="tight">'
+        + c.cited.map(id => '<li>'+doc(id).title+' <span class="muted">('+doc(id).source+', '+doc(id).year+')</span></li>').join('')
+        + '</ul>'
+        + '<b>Independent sources:</b> '+indepNames(c).join(', ')
+        + (c.dependsOn ? '<br><b>Depends on claim:</b> '+claims().find(x=>x.id===c.dependsOn).text : '')
+        + '</td></tr>';
+    }
+    return r;
+  }).join('');
+  let insight = '';
+  if (S.d13 !== 'done'){
+    insight = '<div class="card"><b>Look at the first row.</b> "Annual leave is 20 days" appears in <b>7 documents</b>, but they all trace back to <b>one</b> original: the HR Leave Policy v2. Sherlock counts it as one source, not seven. Repetition is not proof.</div>';
+  }
+  return '<h2>2. Summary: claims and where they came from</h2><p class="muted">Click a claim to see where it started and which documents repeat it.</p>'
+    + explain('What is happening behind the scenes','The AI model splits every document into small, checkable claims, keeps the exact quote, and traces each claim to the earliest document that states it. Documents that only repeat a claim are linked to it, not counted as new evidence.')
+    + stats + insight
+    + '<div class="card"><table><thead><tr><th>Claim</th><th>Status</th><th>Stated in</th><th>Independent sources</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    + '<div class="row"><button class="ghost" data-a="go" data-v="3">Next: look at the sources</button>'
+    + '<button class="primary" data-a="go" data-v="4">Skip to: a new document arrives</button></div>';
+}
+
+function sourceList(){
+  const cl = claims();
+  const names = [];
+  visibleDocs().forEach(d => { if (!names.includes(d.source)) names.push(d.source); });
+  return names.map(name => {
+    const docsOf = visibleDocs().filter(d => d.source === name);
+    const years = docsOf.map(d => d.year);
+    const own = cl.filter(c => doc(c.origin).source === name);
+    const repeats = cl.filter(c => doc(c.origin).source !== name && c.cited.some(id => doc(id).source === name));
+    return {name, docs:docsOf, from:Math.min(...years), to:Math.max(...years), own, repeats};
+  });
+}
+
+function stepSources(){
+  const list = sourceList();
+  const rows = list.map(s => {
+    const count = {green:0, grey:0, amber:0, red:0};
+    s.own.forEach(c => count[status(c)[1]]++);
+    const chips = [];
+    if (count.green) chips.push(pill(count.green+' corroborated / current','green'));
+    if (count.grey) chips.push(pill(count.grey+' single source','grey'));
+    if (count.amber) chips.push(pill(count.amber+' needs review','amber'));
+    if (count.red) chips.push(pill(count.red+' superseded / conflict','red'));
+    if (!s.own.length) chips.push(pill('no original claims','grey'));
+    if (s.repeats.length) chips.push(pill('repeats '+s.repeats.length+' claim'+(s.repeats.length>1?'s':'')+' from others','blue'));
+    const open = S.openSource === s.name;
+    let r = '<tr class="click" data-a="source" data-v="'+s.name+'"><td><b>'+s.name+'</b></td><td>'+chips.join(' ')+'</td><td>'+(s.from===s.to?s.from:s.from+' to '+s.to)+'</td><td>'+s.docs.length+'</td></tr>';
+    if (open){
+      r += '<tr class="detail"><td colspan="4"><b>Linked documents</b><ul class="tight">'
+        + s.docs.map(d => '<li>'+d.title+' <span class="muted">('+d.year+')</span></li>').join('') + '</ul>'
+        + (s.own.length ? '<b>Original claims from this source</b><ul class="tight">'+s.own.map(c => '<li>'+c.text+' '+pill(status(c)[0], status(c)[1])+'</li>').join('')+'</ul>' : '<p class="muted">This source has not introduced any original claims. It only repeats claims from other sources.</p>')
+        + (s.repeats.length ? '<b>Claims it repeats</b><ul class="tight">'+s.repeats.map(c => '<li>'+c.text+'</li>').join('')+'</ul>' : '')
+        + '</td></tr>';
+    }
+    return r;
+  }).join('');
+  return '<h2>3. Sources: who has been reliable?</h2><p class="muted">Click a source for its record and linked documents.</p>'
+    + explain('What is happening behind the scenes','Sherlock does not give a mysterious accuracy score. It shows a reliability record: how many of a source\'s original claims were corroborated, superseded or flagged. It also shows which sources only repeat others.')
+    + '<div class="card"><table><thead><tr><th>Source</th><th>Reliability record</th><th>Active</th><th>Docs</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    + '<button class="primary" data-a="go" data-v="4">Next: a new document arrives</button>';
+}
+
+function stepReview(){
+  let body = '';
+  const d13 = doc('D13');
+  const card = '<div class="card"><div class="row"><b>'+d13.title+'</b>'+pill(d13.source,'grey')+pill('2026','grey')+'</div>'
+    + '<div class="quote">'+d13.text+'<small>D13 · new upload</small></div></div>';
+  if (S.d13 === 'none'){
+    body = '<p class="muted">Someone uploads a signed policy update. It changes some numbers.</p>' + card
+      + '<button class="primary" data-a="upload13">Upload this document and investigate</button>';
+  } else if (S.busy){
+    body = card + '<div class="card"><b>'+S.msg+'</b><div class="bar"><i style="width:'+S.progress+'%"></i></div></div>';
+  } else {
+    const done = PROPOSALS.every(p => S.dec[p.id] !== null);
+    body = card + '<h3>Sherlock proposes three relationships. You decide.</h3>'
+      + PROPOSALS.map(p => {
+        const dec = S.dec[p.id];
+        const buttons = dec === null
+          ? '<div class="row"><button class="good" data-a="decide" data-v="'+p.id+':accepted">'+p.yes+'</button><button class="bad" data-a="decide" data-v="'+p.id+':dismissed">'+p.no+'</button></div>'
+          : '<div>'+pill(dec === 'accepted' ? 'Decision: '+p.yes.replace('Confirm: ','') : 'Decision: dismissed', dec === 'accepted' ? 'green' : 'grey')+' <span class="muted">Recorded in the audit log</span></div>';
+        return '<div class="card proposal'+(dec!==null?' decided':'')+'">'
+          + '<div class="row">'+pill(p.kind,p.cls)+'<b>'+p.title+'</b><span class="muted">Confidence '+p.conf+'%</span></div>'
+          + '<div class="two"><div class="quote">'+p.a.quote+'<small>'+doc(p.a.doc).title+'</small></div><div class="quote">'+p.b.quote+'<small>'+doc(p.b.doc).title+'</small></div></div>'
+          + '<p class="muted">'+p.why+'</p>' + buttons + '</div>';
+      }).join('')
+      + (done ? '<button class="primary" data-a="go" data-v="5">See the impact and the audit log</button>' : '<p class="muted">Decide all three to continue. Tip: the third one has low confidence. Sherlock is unsure, which is exactly why a person decides.</p>');
+  }
+  return '<h2>4. A new document arrives: review</h2>'
+    + explain('What is happening behind the scenes','Sherlock compares each new claim with existing claims on the same subject and time period, and proposes a relationship. It shows both quotes side by side and a confidence level. Nothing changes until a person confirms.')
+    + body;
+}
+
+function stepImpact(){
+  const accepted = S.dec.P1 === 'accepted';
+  const cl = claims();
+  const affected = {};
+  cl.forEach(c => {
+    const label = status(c)[1];
+    if (c.id === 'K1' && accepted) c.cited.forEach(id => { (affected[id] = affected[id] || []).push('States a superseded claim: "20 days"'); });
+    if (c.id === 'K7' && accepted) (affected[c.origin] = affected[c.origin] || []).push('Figure depends on the superseded 20-day claim');
+    if (c.id === 'K5' && S.dec.P3 === 'accepted') (affected[c.origin] = affected[c.origin] || []).push('Part of a confirmed conflict');
+  });
+  const ids = Object.keys(affected);
+  const impact = ids.length
+    ? '<div class="card"><table><thead><tr><th>Document</th><th>Why it is flagged</th><th>Suggested action</th></tr></thead><tbody>'
+      + ids.map(id => '<tr><td><b>'+doc(id).title+'</b><br><span class="muted">'+doc(id).source+', '+doc(id).year+'</span></td><td>'+affected[id].join('<br>')+'</td><td>'+(id==='D1'?'Mark as replaced by v3':id==='D9'?'Recalculate the liability':'Update or annotate')+'</td></tr>').join('')
+      + '</tbody></table></div>'
+    : '<div class="card muted">Nothing is flagged as affected from your decisions.</div>';
+  const summary = accepted
+    ? '<div class="stats"><div class="stat"><div class="n">'+ids.length+'</div><div class="l">documents affected by one new document</div></div><div class="stat"><div class="n">1</div><div class="l">click to see them all</div></div><div class="stat"><div class="n">0</div><div class="l">original files modified</div></div></div>'
+    : '';
+  const logRows = S.log.map((e, i) => {
+    const shown = (S.tampered && i === 1) ? e.detail + ' (EDITED AFTER THE FACT)' : e.detail;
+    return '<tr><td>'+e.n+'</td><td>'+e.time+'</td><td>'+e.actor+'</td><td>'+e.action+'<br><span class="muted">'+shown+'</span></td><td class="mono">'+e.hash+'</td></tr>';
+  }).join('');
+  let verify = '';
+  if (S.verifyMsg) verify = '<div class="card" style="border-color:'+(S.verifyMsg.ok?'#9fd3b4':'#e3b4b4')+'">'+S.verifyMsg.text+'</div>';
+  return '<h2>5. Impact and audit log</h2>'
+    + explain('What is happening behind the scenes','Sherlock lists every document touched by your decision. Your decisions are saved as new entries in an append-only log. The original documents and their fingerprints are never edited. Each log entry includes the fingerprint of the one before, so any change to history is detectable.')
+    + summary + impact
+    + '<h3>Audit log</h3><div class="card"><table><thead><tr><th>#</th><th>Time</th><th>Who</th><th>What</th><th>Fingerprint</th></tr></thead><tbody>'+logRows+'</tbody></table></div>'
+    + '<div class="row"><button class="ghost" data-a="verify">Verify the log</button>'
+    + (S.tampered ? '<button class="ghost" data-a="restore">Undo the edit</button>' : '<button class="bad" data-a="tamper">Try to secretly edit an old entry</button>')
+    + '<button class="ghost" data-a="reset">Restart the demo</button></div>' + verify;
+}
+
+/* ---------- Render ---------- */
+function render(){
+  const names = ['1. Upload','2. Summary','3. Sources','4. New document','5. Impact'];
+  document.getElementById('steps').innerHTML = names.map((n, i) => {
+    const k = i + 1;
+    const cls = k === S.step ? 'on' : (k <= S.maxStep ? 'done' : '');
+    return '<button class="'+cls+'" data-a="go" data-v="'+k+'" '+(k > S.maxStep || S.busy ? 'disabled' : '')+'>'+n+'</button>';
+  }).join('');
+  const screens = [stepUpload, stepSummary, stepSources, stepReview, stepImpact];
+  document.getElementById('app').innerHTML = screens[S.step-1]();
+}
+
+/* ---------- Actions ---------- */
+function verifyLog(){
+  let prev = '00000000';
+  for (let i = 0; i < S.log.length; i++){
+    const e = S.log[i];
+    const detail = (S.tampered && i === 1) ? e.detail + ' (EDITED AFTER THE FACT)' : e.detail;
+    const h = hash(prev + e.n + e.actor + e.action + detail);
+    if (h !== e.hash) return {ok:false, text:'<b>Chain broken at entry #'+e.n+'.</b> The stored fingerprint does not match its contents, so someone changed it after it was written. Every later entry is also untrusted.'};
+    prev = e.hash;
+  }
+  return {ok:true, text:'<b>Log verified.</b> All '+S.log.length+' entries match their fingerprints and each links to the one before.'};
+}
+
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-a]');
+  if (!el || S.busy) return;
+  const a = el.dataset.a, v = el.dataset.v;
+  if (a === 'go'){ go(Number(v)); }
+  else if (a === 'analyse'){
+    run(['Reading 12 documents…','Fingerprinting the originals…','Extracting claims…','Tracing claims to their earliest source…','Counting independent sources…'], 600, () => {
+      S.analysed = true;
+      addLog('Sherlock','Collection created','Staff leave policy');
+      addLog('Sherlock','Documents ingested','12 files read, 12 fingerprints stored');
+      addLog('Sherlock','Claims extracted',claims().length+' claims linked to '+sourceList().length+' sources');
+    });
+  }
+  else if (a === 'claim'){ S.openClaim = S.openClaim === v ? null : v; render(); }
+  else if (a === 'source'){ S.openSource = S.openSource === v ? null : v; render(); }
+  else if (a === 'upload13'){
+    run(['Reading the new document…','Fingerprinting it…','Extracting its claims…','Comparing with existing claims…','Preparing proposals…'], 600, () => {
+      S.d13 = 'done';
+      addLog('Sherlock','Document ingested','Leave Policy v3 (signed), fingerprint '+hash(doc('D13').text));
+      addLog('Sherlock','Proposals created','3 relationships proposed, awaiting review');
+    });
+  }
+  else if (a === 'decide'){
+    const [id, choice] = v.split(':');
+    S.dec[id] = choice;
+    const p = PROPOSALS.find(x => x.id === id);
+    addLog('A. Smith (information manager)', choice === 'accepted' ? p.yes : 'Dismissed proposal', p.kind+': '+p.title);
+    render();
+  }
+  else if (a === 'tamper'){ S.tampered = true; S.verifyMsg = null; render(); }
+  else if (a === 'restore'){ S.tampered = false; S.verifyMsg = null; render(); }
+  else if (a === 'verify'){ S.verifyMsg = verifyLog(); render(); }
+  else if (a === 'reset'){
+    S.step = 1; S.maxStep = 1; S.analysed = false; S.d13 = 'none';
+    S.dec = {P1:null,P2:null,P3:null}; S.openClaim = null; S.openSource = null;
+    S.log = []; S.tampered = false; S.verifyMsg = null; render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
