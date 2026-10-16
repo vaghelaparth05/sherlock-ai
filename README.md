@@ -20,6 +20,25 @@ Built for the RIMPA 2026 hackathon problem: *How might we build information mana
 | `docs/Sherlock-ai-how-it-works.pdf` | Design document explaining how Sherlock works |
 | `prototype/sherlock-demo.html` | Hard-coded, click-through demo (open in any browser) |
 
+## Run it
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. Uploaded files are written to `data/uploads/` (git-ignored).
+
+## Stack
+
+Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. Route handlers under `src/app/api` are the backend for now.
+
 ## Status
 
-Design and clickable prototype done. Next: real application (ingestion, claim extraction, claim graph, relationship engine, review UI, audit log).
+- [x] Design document and clickable prototype
+- [x] Step 1: Import page (multi-file and folder upload with SHA-256, database tab with a **mocked** connection, sample set)
+- [ ] Step 2: Scanning screen
+- [ ] Step 3: Results (bias, misinformation, disinformation)
+- [ ] Step 4: Load new documents, then Summary and charts
+- [ ] Step 5: User review queue and audit log
+- [ ] Real database connector, Gemini claim extraction
