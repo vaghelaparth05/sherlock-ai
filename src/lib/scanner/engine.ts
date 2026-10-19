@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { NUMBER_TOKEN, numberFromToken } from "@/lib/text";
-import { GLOBAL_ATTRIBUTES, type Attribute, type CandidateFinding, type DocInput, type ExtractedClaim, type ExtractedDoc } from "@/lib/scanner/types";
+import { GLOBAL_ATTRIBUTES, KNOWN_ATTRIBUTES, type CandidateFinding, type DocInput, type ExtractedClaim, type ExtractedDoc } from "@/lib/scanner/types";
 import type { ClaimStatus, Evidence, Severity } from "@/lib/types";
 
 /**
  * Deterministic analysis. The AI (or the rules scanner) only EXTRACTS structured facts
  * from each document. Everything that decides whether two facts conflict, which one is
- * current, who the original source is, and whether a file was altered happens here, in
- * code, so results are reproducible and every finding can point at its evidence.
+ * current, who the original source is, whether a file was altered, or whether a record is
+ * hidden from the AI happens here, in code, so results are reproducible and every finding
+ * can point at its evidence.
  */
 
 export interface EngineInput {
@@ -27,12 +28,19 @@ export interface EngineDoc {
   status: string;
   isAuthority: boolean;
   isRegister: boolean;
+  recordStatus: string | null;
+  series: string | null;
+  version: number | null;
+  inAiScope: boolean | null;
+  aiGenerated: boolean;
+  custody: string[];
+  frontId: string | null;
 }
 
 export interface EngineClaim {
   key: string;
   text: string;
-  attribute: Attribute;
+  attribute: string;
   subject: string;
   value: string;
   originDocId: string;
@@ -46,19 +54,54 @@ export interface EngineResult {
   candidates: CandidateFinding[];
 }
 
-/* ---------- helpers ---------- */
+/* ---------- vocabulary ---------- */
 
-const STOP = new Set(["the", "of", "and", "for", "a", "an", "to", "in", "on", "file", "record", "all", "any"]);
-const ATTR_LABEL: Record<Attribute, string> = {
+const LABEL: Record<string, string> = {
   retention_period: "retention period",
   transfer_age: "transfer age",
   access_period: "open access period",
   disposal_action: "disposal action",
   security_classification: "security classification",
   custodian: "custodian",
+  income_threshold: "household income limit",
+  payment_amount: "grant payment",
+  application_deadline: "closing date",
+  application_fee: "application fee",
+  payment_method: "payment method",
+  tenure_requirement: "tenure rule",
+  proof_of_address_requirement: "proof of address rule",
+  eligibility_conditions: "eligibility conditions",
   other: "figure",
 };
+/** Global facts keep their original wording for the recordkeeping ones, so existing results do not change. */
+const LEGACY_FORMAT = new Set(["access_period", "security_classification"]);
 
+/** Maps the names an AI might invent for a common fact back to the canonical one. */
+const CANON: [RegExp, string][] = [
+  [/income.*(threshold|limit|cap|test|cut)|(threshold|limit|cap).*income|household income/, "income_threshold"],
+  [/deadline|closing date|close date|applications? clos|last day to apply/, "application_deadline"],
+  [/\bfee\b|charge|cost to apply|free to apply/, "application_fee"],
+  [/payment method|paid (by|via)|method of payment|how .*paid|payment channel/, "payment_method"],
+  [/payment (amount|tier)|grant (amount|tier)|amount.*(household|payment|grant)|payment per|tiers?\b/, "payment_amount"],
+  [/owner|tenure|occupier|renter/, "tenure_requirement"],
+  [/proof of address|address proof|evidence of address|address evidence|proof_of_address/, "proof_of_address_requirement"],
+  [/eligibility (conditions|criteria|requirements)|eligib.*conditions|criteria/, "eligibility_conditions"],
+];
+const KNOWN = new Set<string>(KNOWN_ATTRIBUTES);
+/** Measurements change over time (counts, averages), so two different readings are not a contradiction. */
+const VOLATILE = /average|count|number[ _]of|total|rate\b|time[ _]to|processing[ _]time|received|approved|paid[ _]count|backlog|volume/;
+
+function canonAttribute(raw: string): string {
+  const a = raw.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "other";
+  if (KNOWN.has(a)) return a;
+  const spaced = a.replace(/_/g, " ");
+  for (const [re, name] of CANON) if (re.test(spaced)) return name;
+  return a;
+}
+
+/* ---------- helpers ---------- */
+
+const STOP = new Set(["the", "of", "and", "for", "a", "an", "to", "in", "on", "file", "record", "all", "any"]);
 const singular = (t: string) => (t.length > 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t);
 const tokens = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).map(singular).filter((t) => !STOP.has(t));
@@ -71,6 +114,19 @@ const jaccard = (a: string[], b: string[]) => {
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const fp = (...parts: string[]) => createHash("sha1").update(parts.join("|")).digest("hex").slice(0, 16);
 const normText = (s: string) => s.toLowerCase().replace(/[^a-z0-9$.,/]+/g, " ").trim();
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+const MONTHS: Record<string, number> = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+
+function parseDate(v: string): string | null {
+  const iso = v.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return iso[0];
+  const m = v.match(/\b(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\b/);
+  const mo = m ? MONTHS[m[2].toLowerCase()] : undefined;
+  return m && mo ? `${m[3]}-${String(mo).padStart(2, "0")}-${String(Number(m[1])).padStart(2, "0")}` : null;
+}
+
+const moneySet = (v: string) => [...new Set([...v.matchAll(/\$\s?([\d,]+(?:\.\d+)?)/g)].map((x) => Number(x[1].replace(/,/g, ""))))].sort((a, b) => a - b);
 
 function durationYears(v: string): number | null {
   const m = v.match(new RegExp(`(${NUMBER_TOKEN})\\s+(year|month|day)s?`, "i"));
@@ -80,10 +136,20 @@ function durationYears(v: string): number | null {
   const unit = m[2].toLowerCase();
   return unit === "year" ? n : unit === "month" ? n / 12 : n / 365;
 }
-/** Canonical key so "10 years" and "ten years" compare equal. */
+
+const NONE = /^(none|nil|free|no fee|no charge|no cost|not charged|no fees?)$/i;
+
+/** Canonical key so "10 years" and "ten years", "$90,000" and "90000 dollars", or two dates compare equal. */
 function valueKey(v: string): string {
+  const money = moneySet(v);
+  if (money.length) return `amt:${money.join(",")}`;
+  if (NONE.test(v.trim())) return "txt:none";
+  const date = parseDate(v);
+  if (date && !/year|month|day\b/i.test(v.replace(/\d{1,2}\s+[A-Za-z]+\s+\d{4}/, ""))) return `date:${date}`;
   const y = durationYears(v);
-  return y !== null ? `dur:${Math.round(y * 100) / 100}` : `txt:${normText(v)}`;
+  if (y !== null) return `dur:${Math.round(y * 100) / 100}`;
+  const t = tokens(v).sort();
+  return t.length ? `txt:${t.join(" ")}` : `txt:${normText(v)}`;
 }
 
 function highlight(quote: string, value: string): string {
@@ -100,6 +166,8 @@ function highlight(quote: string, value: string): string {
       return m;
     });
   }
+  const money = value.match(/\$\s?[\d,]+(?:\.\d+)?/g);
+  if (money && money.length > 1) return money.reduce((q, m) => q.replace(m, `[[${m}]]`), quote);
   const i = quote.toLowerCase().indexOf(value.toLowerCase());
   return i === -1 ? quote : `${quote.slice(0, i)}[[${quote.slice(i, i + value.length)}]]${quote.slice(i + value.length)}`;
 }
@@ -108,6 +176,10 @@ const monthYear = (iso: string | null) => {
   if (!iso) return "an undated";
   const d = new Date(iso + "T00:00:00Z");
   return d.toLocaleString("en-AU", { month: "long", year: "numeric", timeZone: "UTC" });
+};
+const longDate = (iso: string | null) => {
+  if (!iso) return "an undated";
+  return new Date(iso + "T00:00:00Z").toLocaleString("en-AU", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 };
 
 /* ---------- main ---------- */
@@ -120,7 +192,16 @@ interface Ctx extends EngineDoc {
 interface Instance {
   doc: Ctx;
   claim: ExtractedClaim;
+  attribute: string;
   vkey: string;
+}
+
+interface Group {
+  key: string;
+  attribute: string;
+  subject: string;
+  subjectTokens: string[];
+  instances: Instance[];
 }
 
 export function analyse(inputs: EngineInput[]): EngineResult {
@@ -130,59 +211,102 @@ export function analyse(inputs: EngineInput[]): EngineResult {
     name: doc.name,
     title: ex.title || doc.name,
     producedBy: ex.producedBy,
-    organisation: ex.organisation || ex.producedBy,
+    organisation: ex.organisation || "",
     date: ex.date,
     year: ex.date ? Number(ex.date.slice(0, 4)) : null,
     docType: ex.docType,
     status: ex.status,
-    isAuthority: /authority/i.test(ex.docType) && !/register/i.test(ex.docType),
+    isAuthority: (/authority/i.test(ex.docType) && !/register/i.test(ex.docType)) || ex.recordStatus === "declared",
     isRegister: /register|registry/i.test(ex.docType),
+    recordStatus: ex.recordStatus ?? null,
+    series: ex.series ?? null,
+    version: ex.version ?? null,
+    inAiScope: ex.inAiScope ?? null,
+    aiGenerated: ex.aiGenerated === true || ex.recordStatus === "ai_generated",
+    custody: ex.custody ?? [],
+    frontId: ex.frontId ?? null,
     input: { doc, ex },
     refersToIds: [],
   }));
+
+  // Records with no stated organisation belong to the one most of the collection names.
+  const orgCounts = new Map<string, number>();
+  for (const c of ctxs) if (c.organisation) orgCounts.set(c.organisation, (orgCounts.get(c.organisation) ?? 0) + 1);
+  const majorityOrg = [...orgCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  for (const c of ctxs) if (!c.organisation) c.organisation = majorityOrg ?? c.producedBy;
+
+  // Who a record says it is based on: by title, or by the id in its front matter.
   for (const c of ctxs) {
     for (const ref of c.input.ex.refersTo) {
       const r = normText(ref);
       const hit = ctxs.find((o) => o.id !== c.id && (normText(o.title).includes(r) || r.includes(normText(o.title))));
       if (hit) c.refersToIds.push(hit.id);
     }
+    for (const id of c.input.ex.cites ?? []) {
+      const hit = ctxs.find((o) => o.id !== c.id && o.frontId === id);
+      if (hit && !c.refersToIds.includes(hit.id)) c.refersToIds.push(hit.id);
+    }
   }
   const dateOf = (c: Ctx) => c.date ?? "9999-12-31";
 
-  /* --- group claims --- */
-  const instances: Instance[] = [];
-  for (const c of ctxs) for (const cl of c.input.ex.claims) instances.push({ doc: c, claim: cl, vkey: valueKey(cl.value) });
-
-  interface Group {
-    key: string;
-    attribute: Attribute;
-    subject: string;
-    subjectTokens: string[];
-    instances: Instance[];
+  /* the newest version in each series is the live one */
+  const seriesLatest = new Map<string, Ctx>();
+  for (const c of ctxs) {
+    if (!c.series || c.version === null) continue;
+    const cur = seriesLatest.get(c.series);
+    if (!cur || (c.version ?? 0) > (cur.version ?? 0)) seriesLatest.set(c.series, c);
   }
+  const isLatestVersion = (c: Ctx) => !!c.series && seriesLatest.get(c.series)?.id === c.id;
+
+  /* --- claims, split into ordinary facts, scoped exceptions and condition lists --- */
+  const instances: Instance[] = [];
+  const scoped: Instance[] = [];
+  const conditions: Instance[] = [];
+  for (const c of ctxs) {
+    for (const cl of c.input.ex.claims) {
+      const attribute = canonAttribute(cl.attribute);
+      if (VOLATILE.test(attribute) || attribute === "other") continue;
+      const inst: Instance = { doc: c, claim: cl, attribute, vkey: valueKey(cl.value) };
+      if (attribute === "eligibility_conditions") conditions.push(inst);
+      else if (cl.appliesTo) scoped.push(inst);
+      else instances.push(inst);
+    }
+  }
+
   const groups: Group[] = [];
   for (const inst of instances) {
-    if (inst.claim.attribute === "other") continue;
-    const global = GLOBAL_ATTRIBUTES.includes(inst.claim.attribute);
+    const global = GLOBAL_ATTRIBUTES.includes(inst.attribute);
     const toks = global ? ["_all"] : tokens(inst.claim.subject);
-    let g = groups.find((x) => x.attribute === inst.claim.attribute && jaccard(x.subjectTokens, toks) >= 0.5);
+    let g = groups.find((x) => x.attribute === inst.attribute && jaccard(x.subjectTokens, toks) >= 0.5);
     if (!g) {
       g = {
-        key: `${inst.claim.attribute}|${global ? "all" : toks.join(" ")}`,
-        attribute: inst.claim.attribute,
-        subject: global ? "public access to Commonwealth records" : inst.claim.subject.toLowerCase(),
+        key: `${inst.attribute}|${global ? "all" : toks.join(" ")}`,
+        attribute: inst.attribute,
+        subject: global ? (LABEL[inst.attribute] ?? inst.attribute.replace(/_/g, " ")) : inst.claim.subject.toLowerCase(),
         subjectTokens: toks,
         instances: [],
       };
+      if (inst.attribute === "access_period") g.subject = "public access to Commonwealth records";
       groups.push(g);
     }
     g.instances.push(inst);
+  }
+  // Wording varies ("owner-occupiers only" / "only owner-occupiers"): treat close text values as the same value.
+  for (const g of groups) {
+    const seen: string[] = [];
+    for (const inst of g.instances) {
+      if (!inst.vkey.startsWith("txt:")) continue;
+      const toks = inst.vkey.slice(4).split(" ").filter(Boolean);
+      const hit = seen.find((k) => jaccard(k.slice(4).split(" "), toks) >= 0.6);
+      if (hit) inst.vkey = hit;
+      else seen.push(inst.vkey);
+    }
   }
 
   const claims: EngineClaim[] = [];
   const candidates: CandidateFinding[] = [];
   const claimKeyFor = (g: Group, vkey: string) => `${g.key}|${vkey}`;
-  const outdatedValues = new Map<string, { value: string; authValue: string; authDoc: Ctx }>(); // claimKey -> info (for depends-on)
+  const outdatedValues = new Map<string, { value: string; authValue: string; authDoc: Ctx }>();
 
   /** How many independent sources stand behind a set of instances. */
   function independentRoots(list: Instance[]): Ctx[] {
@@ -199,19 +323,29 @@ export function analyse(inputs: EngineInput[]): EngineResult {
     }
     return out;
   }
-
   const origin = (list: Instance[]): Ctx => [...list].sort((a, b) => dateOf(a.doc).localeCompare(dateOf(b.doc)))[0].doc;
+
+  /** Which declared record wins when several state a fact: a Records Authority, then the newest version, then the latest. */
+  const authorityOrder = (a: Instance, b: Instance) =>
+    Number(/authority/i.test(b.doc.docType)) - Number(/authority/i.test(a.doc.docType)) ||
+    Number(isLatestVersion(b.doc)) - Number(isLatestVersion(a.doc)) ||
+    dateOf(b.doc).localeCompare(dateOf(a.doc));
+  const isRecordsAuthority = (d: Ctx) => /authority/i.test(d.docType) && !/register/i.test(d.docType);
+  const authName = (d: Ctx) => (isRecordsAuthority(d) ? "the Records Authority" : `“${d.title}”`);
 
   for (const g of groups) {
     const byValue = new Map<string, Instance[]>();
     for (const i of g.instances) byValue.set(i.vkey, [...(byValue.get(i.vkey) ?? []), i]);
-    const label = ATTR_LABEL[g.attribute];
+    const label = LABEL[g.attribute] ?? g.attribute.replace(/_/g, " ");
+    const global = GLOBAL_ATTRIBUTES.includes(g.attribute) && !LEGACY_FORMAT.has(g.attribute);
     const subjLabel = cap(g.subject);
+    /** "Household income limit" for single-rule facts, "Grant application files: retention period" for the rest. */
+    const topic = global ? cap(label) : subjLabel;
     const mkClaim = (vkey: string, status: ClaimStatus): EngineClaim => {
       const list = byValue.get(vkey)!;
       return {
         key: claimKeyFor(g, vkey),
-        text: `${subjLabel}: ${label} is ${list[0].claim.value}`,
+        text: global ? `${cap(label)} is ${list[0].claim.value}` : `${subjLabel}: ${label} is ${list[0].claim.value}`,
         attribute: g.attribute,
         subject: g.subject,
         value: list[0].claim.value,
@@ -234,7 +368,7 @@ export function analyse(inputs: EngineInput[]): EngineResult {
         candidates.push({
           type: "bias",
           kind: "single-source",
-          title: `${subjLabel}: ${list[0].claim.value} rests on one original source`,
+          title: `${topic}: ${list[0].claim.value} rests on one original source`,
           summary: `${docsCount} documents state it, but they all trace back to ${o.title}. It counts as one source, not ${docsCount}.`,
           severity: "medium",
           confidence: 88,
@@ -248,8 +382,8 @@ export function analyse(inputs: EngineInput[]): EngineResult {
     }
 
     /* several values: decide which is current */
-    const authInst = g.instances.filter((i) => i.doc.isAuthority && i.doc.status !== "superseded" && i.doc.status !== "withdrawn");
-    const auth = authInst.length ? authInst.sort((a, b) => dateOf(b.doc).localeCompare(dateOf(a.doc)))[0] : null;
+    const authInst = g.instances.filter((i) => i.doc.isAuthority && i.doc.status !== "superseded" && i.doc.status !== "withdrawn").sort(authorityOrder);
+    const auth = authInst[0] ?? null;
 
     if (auth) {
       const authKey = auth.vkey;
@@ -262,21 +396,19 @@ export function analyse(inputs: EngineInput[]): EngineResult {
         const o = origin(list);
         const oInst = list.find((i) => i.doc.id === o.id)!;
         const authEv: Evidence = { label: "Authority", docId: auth.doc.id, quote: highlight(auth.claim.quote, auth.claim.value) };
+        const authLabel = isRecordsAuthority(auth.doc) ? "Authority" : "Current";
 
         /* a later document disagrees with the authority */
         for (const i of laterThanAuthority) {
-          claims.push({ ...mkClaim(vkey, "review"), key: `${claimKeyFor(g, vkey)}|${i.doc.id}`, citedByDocIds: [i.doc.id], originDocId: i.doc.id });
+          claims.push({ ...mkClaim(vkey, "review"), text: `${mkClaim(vkey, "review").text} (in ${i.doc.title})`, key: `${claimKeyFor(g, vkey)}|${i.doc.id}`, citedByDocIds: [i.doc.id], originDocId: i.doc.id });
           candidates.push({
             type: "misinformation",
             kind: "contradicts-authority",
-            title: `${i.doc.title} disagrees with the Records Authority on ${g.attribute === "access_period" ? "public access" : g.subject}`,
-            summary: `It says ${i.claim.value}; the authority says ${auth.claim.value}. The document is dated after the authority, so it may have been changed or misread.`,
+            title: `${i.doc.title} disagrees with ${authName(auth.doc)} on ${g.attribute === "access_period" ? "public access" : global ? label : g.subject}`,
+            summary: `It says ${i.claim.value}; ${isRecordsAuthority(auth.doc) ? "the authority" : "the current record"} says ${auth.claim.value}. The document is dated after ${isRecordsAuthority(auth.doc) ? "the authority" : "the current record"}, so it may have been changed or misread${i.doc.aiGenerated ? ", and it was written by an AI" : ""}.`,
             severity: "high",
             confidence: 90,
-            evidence: [
-              { label: "This document", docId: i.doc.id, quote: highlight(i.claim.quote, i.claim.value) },
-              authEv,
-            ],
+            evidence: [{ label: "This document", docId: i.doc.id, quote: highlight(i.claim.quote, i.claim.value) }, { ...authEv, label: authLabel }],
             docIds: [i.doc.id, auth.doc.id],
             claimKeys: [`${claimKeyFor(g, vkey)}|${i.doc.id}`, claimKeyFor(g, authKey)],
             fingerprint: fp("misinformation", "contradicts-authority", g.key, i.doc.id, vkey),
@@ -289,7 +421,7 @@ export function analyse(inputs: EngineInput[]): EngineResult {
           candidates.push({
             type: "bias",
             kind: "single-source",
-            title: `${subjLabel}: ${list[0].claim.value} rests on one original source`,
+            title: `${topic}: ${list[0].claim.value} rests on one original source`,
             summary: `${listDocs.size} documents state it, but they all trace back to ${o.title}. It counts as one source, not ${listDocs.size}.`,
             severity: "medium",
             confidence: 88,
@@ -313,8 +445,8 @@ export function analyse(inputs: EngineInput[]): EngineResult {
               candidates.push({
                 type: "misinformation",
                 kind: "supersedes",
-                title: `${g.attribute === "access_period" ? "Public access after" : subjLabel + ":"} ${list[0].claim.value} is out of date`,
-                summary: `The ${auth.doc.docType} dated ${monthYear(auth.doc.date)} sets ${auth.claim.value}. ${affected.length} current ${affected.length === 1 ? "document still states" : "documents still state"} ${list[0].claim.value}.`,
+                title: `${g.attribute === "access_period" ? "Public access after" : topic + ":"} ${list[0].claim.value} is out of date`,
+                summary: `${isRecordsAuthority(auth.doc) ? `The ${auth.doc.docType} dated ${monthYear(auth.doc.date)}` : `${auth.doc.title} (${longDate(auth.doc.date)})`} sets ${auth.claim.value}. ${affected.length} current ${affected.length === 1 ? "document still states" : "documents still state"} ${list[0].claim.value}.`,
                 severity: sev,
                 confidence: Math.min(97, 88 + Math.min(affected.length, 3) + (auth.doc.isAuthority ? 3 : 0)),
                 evidence: [{ label: "Older", docId: o.id, quote: highlight(oInst.claim.quote, list[0].claim.value) }, { ...authEv, label: "Newer" }],
@@ -343,7 +475,7 @@ export function analyse(inputs: EngineInput[]): EngineResult {
         candidates.push({
           type: "misinformation",
           kind: "supersedes",
-          title: `${subjLabel}: ${list[0].claim.value} has been replaced`,
+          title: `${topic}: ${list[0].claim.value} has been replaced`,
           summary: `${newestDoc.title} (${monthYear(newestDoc.date)}) states ${newestList[0].claim.value}. Older documents still state ${list[0].claim.value}.`,
           severity: "medium",
           confidence: 78,
@@ -365,7 +497,7 @@ export function analyse(inputs: EngineInput[]): EngineResult {
       candidates.push({
         type: "misinformation",
         kind: "possible-conflict",
-        title: `${subjLabel}: ${[...byValue.values()].map((l) => l[0].claim.value).join(" versus ")}`,
+        title: `${topic}: ${[...byValue.values()].map((l) => l[0].claim.value).join(" versus ")}`,
         summary: "Documents give different values and none is clearly the current one. Sherlock cannot tell whether they describe the same thing, so it needs a person.",
         severity: "low",
         confidence: 57,
@@ -378,48 +510,55 @@ export function analyse(inputs: EngineInput[]): EngineResult {
   }
 
   /* --- figures built on another value (depends-on) --- */
-  for (const inst of instances) {
-    const b = inst.claim.basedOn;
-    if (!b) continue;
-    const btoks = tokens(b.subject);
-    const g = groups.find((x) => x.attribute === b.attribute && jaccard(x.subjectTokens, btoks) >= 0.5);
-    const bkey = valueKey(b.value);
-    const baseKey = g ? claimKeyFor(g, bkey) : null;
-    const outdated = baseKey ? outdatedValues.get(baseKey) : undefined;
-    const claimKey = `dep|${inst.doc.id}|${normText(inst.claim.subject)}`;
-    claims.push({
-      key: claimKey,
-      text: `${cap(inst.claim.subject)}: ${inst.claim.value}`,
-      attribute: "other",
-      subject: inst.claim.subject.toLowerCase(),
-      value: inst.claim.value,
-      originDocId: inst.doc.id,
-      citedByDocIds: [inst.doc.id],
-      status: outdated ? "review" : "single",
-    });
-    if (outdated && baseKey) {
-      candidates.push({
-        type: "misinformation",
-        kind: "depends-on",
-        title: `${cap(inst.claim.subject)} is built on an outdated figure`,
-        summary: `The ${inst.claim.value} figure assumes ${b.value}, but the current source says ${outdated.authValue}. It needs recalculating.`,
-        severity: "medium",
-        confidence: 88,
-        evidence: [
-          { label: "Depends on", docId: inst.doc.id, quote: highlight(highlight(inst.claim.quote, b.value), inst.claim.value) },
-          { label: "Current", docId: outdated.authDoc.id, quote: highlight(instances.find((i) => i.doc.id === outdated.authDoc.id && valueKey(i.claim.value) === valueKey(outdated.authValue))?.claim.quote ?? "", outdated.authValue) },
-        ],
-        docIds: [inst.doc.id, outdated.authDoc.id],
-        claimKeys: [claimKey, baseKey],
-        fingerprint: fp("misinformation", "depends-on", inst.doc.id, claimKey),
+  for (const c of ctxs) {
+    for (const cl of c.input.ex.claims) {
+      const b = cl.basedOn;
+      if (!b) continue;
+      const attr = canonAttribute(b.attribute);
+      const btoks = tokens(b.subject);
+      const g = groups.find((x) => x.attribute === attr && (GLOBAL_ATTRIBUTES.includes(attr) || jaccard(x.subjectTokens, btoks) >= 0.5));
+      const bkey = valueKey(b.value);
+      const baseKey = g ? claimKeyFor(g, bkey) : null;
+      const outdated = baseKey ? outdatedValues.get(baseKey) : undefined;
+      const claimKey = `dep|${c.id}|${normText(cl.subject)}`;
+      claims.push({
+        key: claimKey,
+        text: `${cap(cl.subject)}: ${cl.value}`,
+        attribute: "other",
+        subject: cl.subject.toLowerCase(),
+        value: cl.value,
+        originDocId: c.id,
+        citedByDocIds: [c.id],
+        status: outdated ? "review" : "single",
       });
+      if (outdated && baseKey) {
+        candidates.push({
+          type: "misinformation",
+          kind: "depends-on",
+          title: `${cap(cl.subject)} is built on an outdated figure`,
+          summary: `The ${cl.value} figure assumes ${b.value}, but the current source says ${outdated.authValue}. It needs recalculating.`,
+          severity: "medium",
+          confidence: 88,
+          evidence: [
+            { label: "Depends on", docId: c.id, quote: highlight(highlight(cl.quote, b.value), cl.value) },
+            {
+              label: "Current",
+              docId: outdated.authDoc.id,
+              quote: highlight(instances.find((i) => i.doc.id === outdated.authDoc.id && valueKey(i.claim.value) === valueKey(outdated.authValue))?.claim.quote ?? "", outdated.authValue),
+            },
+          ],
+          docIds: [c.id, outdated.authDoc.id],
+          claimKeys: [claimKey, baseKey],
+          fingerprint: fp("misinformation", "depends-on", c.id, claimKey),
+        });
+      }
     }
   }
 
   /* --- documents that state periods without citing an authority --- */
   for (const c of ctxs) {
     if (c.isAuthority || c.isRegister || c.status === "superseded" || c.input.ex.authorityNumbers.length) continue;
-    const periodClaims = c.input.ex.claims.filter((cl) => ["retention_period", "transfer_age", "access_period"].includes(cl.attribute));
+    const periodClaims = c.input.ex.claims.filter((cl) => ["retention_period", "transfer_age", "access_period"].includes(canonAttribute(cl.attribute)));
     if (!periodClaims.length) continue;
     candidates.push({
       type: "misinformation",
@@ -435,28 +574,152 @@ export function analyse(inputs: EngineInput[]): EngineResult {
     });
   }
 
-  /* --- sources that only repeat others (bias) --- */
+  /* --- older versions that are still in circulation --- */
+  const bySeries = new Map<string, Ctx[]>();
+  for (const c of ctxs) if (c.series && c.version !== null) bySeries.set(c.series, [...(bySeries.get(c.series) ?? []), c]);
+  for (const [series, list] of bySeries) {
+    if (list.length < 2) continue;
+    const latest = seriesLatest.get(series)!;
+    for (const old of list) {
+      if (old.id === latest.id || old.status === "superseded" || old.status === "withdrawn" || old.recordStatus === "superseded") continue;
+      const live = old.inAiScope !== false;
+      candidates.push({
+        type: "misinformation",
+        kind: "superseded-copy",
+        title: `${old.title} is replaced by version ${latest.version} but is still in use`,
+        summary: `Version ${old.version} (${longDate(old.date)}) was replaced on ${longDate(latest.date)}, yet it is still marked ${old.recordStatus ?? old.status}${old.custody.length ? ` and kept in ${old.custody.join(", ").replace(/_/g, " ")}` : ""}. People and AI tools can still find and use it.`,
+        severity: old.recordStatus === "declared" ? "low" : "medium",
+        confidence: 92,
+        evidence: [
+          { label: `Version ${old.version}`, docId: old.id, quote: `${old.title}, ${longDate(old.date)}, status: ${old.recordStatus ?? old.status}` },
+          { label: `Version ${latest.version}`, docId: latest.id, quote: `${latest.title}, ${longDate(latest.date)}, status: ${latest.recordStatus ?? latest.status}` },
+        ],
+        docIds: [old.id, latest.id],
+        claimKeys: [],
+        fingerprint: fp("misinformation", "superseded-copy", series, String(old.version)),
+      });
+      void live;
+    }
+  }
+
+  /* --- AI summaries that leave out a condition the authoritative record states --- */
+  const authConditions = conditions.filter((i) => i.doc.isAuthority && i.doc.status !== "superseded").sort(authorityOrder)[0];
+  if (authConditions) {
+    const items = (v: string) => v.split(/[;]+/).map((x) => x.trim()).filter(Boolean);
+    const authItems = items(authConditions.claim.value);
+    for (const inst of conditions) {
+      if (!inst.doc.aiGenerated) continue;
+      const have = items(inst.claim.value);
+      const missing = authItems.filter((a) => !have.some((h) => jaccard(tokens(a), tokens(h)) >= 0.5));
+      if (!missing.length) continue;
+      candidates.push({
+        type: "misinformation",
+        kind: "omission",
+        title: `${inst.doc.title} leaves out ${missing.length === 1 ? "an eligibility condition" : "eligibility conditions"}`,
+        summary: `It lists who can apply but omits: ${missing.join("; ")}. Someone who does not meet ${missing.length === 1 ? "it" : "them"} could be told to apply.`,
+        severity: "medium",
+        confidence: 82,
+        evidence: [
+          { label: "This summary", docId: inst.doc.id, quote: inst.claim.quote || have.join("; ") },
+          { label: "Authoritative record", docId: authConditions.doc.id, quote: authConditions.claim.quote || authItems.join("; ") },
+        ],
+        docIds: [inst.doc.id, authConditions.doc.id],
+        claimKeys: [],
+        fingerprint: fp("misinformation", "omission", inst.doc.name, missing.join(",")),
+      });
+    }
+  }
+
+  /* --- declared exceptions the AI cannot see --- */
+  const covered = new Set<string>();
+  const generalByAttr = new Map<string, Instance[]>();
+  for (const i of instances) generalByAttr.set(i.attribute, [...(generalByAttr.get(i.attribute) ?? []), i]);
+  const scopedByAttr = new Map<string, Instance[]>();
+  for (const i of scoped) scopedByAttr.set(i.attribute, [...(scopedByAttr.get(i.attribute) ?? []), i]);
+  for (const [attr, exceptions] of scopedByAttr) {
+    const hidden = exceptions.filter((i) => i.doc.inAiScope === false);
+    const general = (generalByAttr.get(attr) ?? []).filter((i) => i.doc.inAiScope !== false).sort((a, b) => dateOf(b.doc).localeCompare(dateOf(a.doc)));
+    const claimKey = `scoped|${attr}`;
+    const who = exceptions[0].claim.appliesTo ?? "some applicants";
+    claims.push({
+      key: claimKey,
+      text: `${cap(LABEL[attr] ?? attr.replace(/_/g, " "))} for ${who}: ${exceptions.find((e) => e.doc.isAuthority)?.claim.value ?? exceptions[0].claim.value}`,
+      attribute: attr,
+      subject: who,
+      value: exceptions[0].claim.value,
+      originDocId: origin(exceptions).id,
+      citedByDocIds: [...new Set(exceptions.map((i) => i.doc.id))],
+      status: hidden.length && general.length ? "review" : "single",
+    });
+    if (!hidden.length || !general.length) continue;
+
+    const docs = [...new Map(exceptions.map((i) => [i.doc.id, i])).values()];
+    const rule = general[0];
+    docs.forEach((i) => covered.add(i.doc.id));
+    candidates.push({
+      type: "bias",
+      kind: "coverage-gap",
+      title: `The exception for ${who} is hidden from the AI and the hotline`,
+      summary: `${plural(docs.length, "record")} describe${docs.length === 1 ? "s" : ""} how ${who} can meet the ${LABEL[attr] ?? attr.replace(/_/g, " ")}, or what happens when they cannot, but ${docs.length === 1 ? "it is" : "they are"} outside the sources the AI can read. Documents it can read give only the general rule, so ${who} may be turned away.`,
+      severity: "high",
+      confidence: 88,
+      evidence: [
+        ...docs.slice(0, 3).map((i) => ({ label: i.doc.isAuthority ? "Declared record" : "Report", docId: i.doc.id, quote: highlight(i.claim.quote, i.claim.value) })),
+        { label: "What the AI can read", docId: rule.doc.id, quote: highlight(rule.claim.quote, rule.claim.value) },
+      ],
+      docIds: [...new Set([...docs.map((i) => i.doc.id), ...general.slice(0, 2).map((i) => i.doc.id)])],
+      claimKeys: [claimKey],
+      fingerprint: fp("bias", "coverage-gap", attr, who),
+    });
+  }
+  const hiddenOthers = ctxs.filter((c) => c.inAiScope === false && !covered.has(c.id));
+  if (hiddenOthers.length) {
+    candidates.push({
+      type: "bias",
+      kind: "out-of-scope",
+      title: `${plural(hiddenOthers.length, "record")} ${hiddenOthers.length === 1 ? "is" : "are"} excluded from the AI's sources`,
+      summary: `${hiddenOthers.map((c) => c.title).join("; ")} ${hiddenOthers.length === 1 ? "is" : "are"} marked out of scope, so the AI will not see ${hiddenOthers.length === 1 ? "it" : "them"}. Check that nothing important is being left out.`,
+      severity: "low",
+      confidence: 70,
+      evidence: hiddenOthers.slice(0, 3).map((c) => ({ label: "Excluded", docId: c.id, quote: `${c.title}${c.custody.length ? `, kept in ${c.custody.join(", ").replace(/_/g, " ")}` : ""}` })),
+      docIds: hiddenOthers.map((c) => c.id),
+      claimKeys: [],
+      fingerprint: fp("bias", "out-of-scope", hiddenOthers.map((c) => c.name).sort().join(",")),
+    });
+  }
+
+  /* --- sources that only repeat others, and repeat something out of date (bias) --- */
   const claimsByOrigin = new Map<string, number>();
-  for (const cl of claims) claimsByOrigin.set(cl.originDocId, (claimsByOrigin.get(cl.originDocId) ?? 0) + 1);
-  const unitNames = [...new Set(ctxs.map((c) => c.producedBy))];
-  for (const unit of unitNames) {
+  // A claim that contradicts the authoritative record is not original, useful work, so it does not count here.
+  for (const cl of claims) if (cl.status !== "review") claimsByOrigin.set(cl.originDocId, (claimsByOrigin.get(cl.originDocId) ?? 0) + 1);
+  const echoUnits: { unit: string; docs: Ctx[]; repeated: EngineClaim[] }[] = [];
+  for (const unit of [...new Set(ctxs.map((c) => c.producedBy))]) {
     const docsOf = ctxs.filter((c) => c.producedBy === unit);
     const own = docsOf.reduce((n, d) => n + (claimsByOrigin.get(d.id) ?? 0), 0);
     const repeated = claims.filter((cl) => cl.originDocId && !docsOf.some((d) => d.id === cl.originDocId) && cl.citedByDocIds.some((id) => docsOf.some((d) => d.id === id)));
-    if (own === 0 && repeated.length >= 2) {
-      candidates.push({
-        type: "bias",
-        kind: "echo",
-        title: `${unit} only repeats other sources`,
-        summary: `It has not introduced any original claims, but it restates ${repeated.length} claims from elsewhere. Readers may take the repetition as separate support.`,
-        severity: "low",
-        confidence: 78,
-        evidence: repeated.slice(0, 2).map((cl) => ({ label: "Repeats", docId: docsOf.find((d) => cl.citedByDocIds.includes(d.id))?.id, quote: cl.text })),
-        docIds: docsOf.map((d) => d.id),
-        claimKeys: repeated.map((cl) => cl.key),
-        fingerprint: fp("bias", "echo", unit),
-      });
-    }
+    if (own === 0 && repeated.some((cl) => cl.status === "superseded")) echoUnits.push({ unit, docs: docsOf, repeated });
+  }
+  if (echoUnits.length) {
+    const stale = (u: (typeof echoUnits)[number]) => u.repeated.filter((cl) => cl.status === "superseded");
+    const all = echoUnits.flatMap((u) => stale(u));
+    const one = echoUnits.length === 1;
+    candidates.push({
+      type: "bias",
+      kind: "echo",
+      title: one ? `${echoUnits[0].unit} only repeats other sources` : `${echoUnits.length} teams only repeat other sources`,
+      summary: one
+        ? `It has not introduced any original claims, but it restates ${plural(echoUnits[0].repeated.length, "claim")} from elsewhere, including ${plural(stale(echoUnits[0]).length, "that is out of date", "that are out of date")}. Readers may take the repetition as separate support.`
+        : `${echoUnits.map((u) => u.unit).join(", ")} have not introduced any original claims, but they restate claims from elsewhere, including out-of-date ones. Readers may take the repetition as separate support.`,
+      severity: "low",
+      confidence: 78,
+      evidence: echoUnits.slice(0, 3).map((u) => {
+        const cl = stale(u)[0];
+        return { label: one ? "Repeats" : u.unit, docId: u.docs.find((d) => cl.citedByDocIds.includes(d.id))?.id, quote: cl.text };
+      }),
+      docIds: [...new Set(echoUnits.flatMap((u) => u.docs.map((d) => d.id)))],
+      claimKeys: [...new Set(all.map((cl) => cl.key))],
+      fingerprint: one ? fp("bias", "echo", echoUnits[0].unit) : fp("bias", "echo", echoUnits.map((u) => u.unit).sort().join("+")),
+    });
   }
 
   /* --- outdated or harmful language (bias) --- */
@@ -482,7 +745,7 @@ export function analyse(inputs: EngineInput[]): EngineResult {
     const counts = new Map<string, Ctx[]>();
     for (const c of ctxs) counts.set(c.organisation, [...(counts.get(c.organisation) ?? []), c]);
     const [org, list] = [...counts.entries()].sort((a, b) => b[1].length - a[1].length)[0];
-    if (list.length / ctxs.length >= 0.7) {
+    if (counts.size >= 2 && list.length / ctxs.length >= 0.7) {
       candidates.push({
         type: "bias",
         kind: "representation",
@@ -561,6 +824,26 @@ export function analyse(inputs: EngineInput[]): EngineResult {
         fingerprint: fp("disinformation", "citation", num),
       });
     }
+  }
+
+  /* --- AI-written content nobody has reviewed. Added last so it can say what was found against it. --- */
+  for (const c of ctxs) {
+    if (!c.aiGenerated) continue;
+    const against = candidates.filter((f) => f.docIds.includes(c.id));
+    const inScope = c.inAiScope !== false;
+    const where = c.custody.length ? `the ${c.custody.join(", ").replace(/_/g, " ")}` : "a shared location";
+    candidates.push({
+      type: "disinformation",
+      kind: "ai-unreviewed",
+      title: `${c.title} was written by an AI and has not been reviewed`,
+      summary: `${against.length ? `${plural(against.length, "problem")} ${against.length === 1 ? "was" : "were"} found in it. ` : ""}It is stored in ${where}${inScope ? ", where the AI assistant can read it and may repeat its mistakes as if they were fact" : ""}. A person has not checked it against the source records, so it cannot be relied on.`,
+      severity: against.length && inScope ? "high" : "medium",
+      confidence: 95,
+      evidence: [{ label: "Provenance", docId: c.id, quote: `${c.title} · ${c.recordStatus ?? c.status} · ${longDate(c.date)} · no human review recorded` }],
+      docIds: [c.id],
+      claimKeys: [],
+      fingerprint: fp("disinformation", "ai-unreviewed", c.name),
+    });
   }
 
   /* de-duplicate claims by key (keep the first) */

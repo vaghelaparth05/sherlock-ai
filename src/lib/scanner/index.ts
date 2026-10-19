@@ -2,6 +2,7 @@ import { geminiKey, geminiModel, geminiProvider, friendlyGeminiError } from "@/l
 import { externalProvider, scannerUrl } from "@/lib/scanner/external-provider";
 import { rulesProvider } from "@/lib/scanner/rules-provider";
 import { analyse, type EngineInput } from "@/lib/scanner/engine";
+import { applyFrontMatter } from "@/lib/scanner/meta";
 import { ExtractedDocSchema, type ScanProvider } from "@/lib/scanner/types";
 import {
   completeScan,
@@ -99,8 +100,12 @@ async function pool<T, R>(items: T[], size: number, fn: (item: T, index: number)
   return out;
 }
 
-/** Saved readings are only reused for the same scanner (and, for Gemini, the same model). */
-const cacheKey = (p: ScanProvider) => (p.id === "gemini" ? `gemini:${p.model}` : p.id);
+/**
+ * Saved readings are only reused for the same scanner (and, for Gemini, the same model).
+ * Bump EXTRACTOR_VERSION when what scanners extract changes, so older saved readings are not reused.
+ */
+const EXTRACTOR_VERSION = "v2";
+const cacheKey = (p: ScanProvider) => `${p.id === "gemini" ? `gemini:${p.model}` : p.id}:${EXTRACTOR_VERSION}`;
 
 async function runScan(scanId: string, collectionId: string, provider: ScanProvider, rereadAll: boolean) {
   const docs = await getDocumentsForScan(collectionId);
@@ -131,6 +136,8 @@ async function runScan(scanId: string, collectionId: string, provider: ScanProvi
         ex = await provider.extract(doc);
         await saveExtraction(doc.sha256, doc.name, cacheKey(provider), (({ warnings, ...rest }) => (void warnings, rest))(ex));
       }
+      // The record's own front matter (status, version, whether the AI may read it) is read by code and always wins.
+      ex = applyFrontMatter(ex, doc.text);
       inputs.push({ doc, ex });
       await setScanDocument(scanId, doc.id, {
         status: "done",
@@ -142,6 +149,13 @@ async function runScan(scanId: string, collectionId: string, provider: ScanProvi
         docStatus: ex.status,
         claimCount: ex.claims.length,
         meta: { organisation: ex.organisation, warnings: ex.warnings ?? [], refersTo: ex.refersTo, authorityNumbers: ex.authorityNumbers, reused: fromCache },
+        recordStatus: ex.recordStatus,
+        series: ex.series,
+        version: ex.version,
+        inAiScope: ex.inAiScope,
+        aiGenerated: ex.aiGenerated === true,
+        custody: ex.custody,
+        frontId: ex.frontId,
       });
       await scanEvent(
         scanId,
@@ -210,6 +224,13 @@ async function runScan(scanId: string, collectionId: string, provider: ScanProvi
       year: d.year,
       docType: d.docType,
       docStatus: d.status,
+      recordStatus: d.recordStatus,
+      series: d.series,
+      version: d.version,
+      inAiScope: d.inAiScope,
+      aiGenerated: d.aiGenerated,
+      custody: d.custody,
+      frontId: d.frontId,
     });
   }
 

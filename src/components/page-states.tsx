@@ -47,11 +47,11 @@ export function NoScans() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function trySample() {
+  async function trySample(set: "naa" | "corpus") {
     setBusy(true);
     setError("");
     try {
-      const s = await postJson<{ id: string }>("/api/samples/naa", {});
+      const s = await postJson<{ id: string }>(`/api/samples/${set}`, {});
       const scan = await postJson<{ id: string }>("/api/scans", { collectionId: s.id });
       router.push(`/scan?scan=${scan.id}`);
     } catch (e) {
@@ -74,11 +74,19 @@ export function NoScans() {
         <button
           type="button"
           disabled={busy}
-          onClick={trySample}
+          onClick={() => trySample("naa")}
           className="inline-flex items-center gap-2 rounded-md border border-line-strong px-4 py-2 text-[13px] transition hover:bg-hover active:scale-[0.97] disabled:opacity-60"
         >
           {busy && <LoaderCircle className="size-3.5 animate-spin" />}
           Scan the NAA sample
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => trySample("corpus")}
+          className="inline-flex items-center gap-2 rounded-md border border-line-strong px-4 py-2 text-[13px] transition hover:bg-hover active:scale-[0.97] disabled:opacity-60"
+        >
+          Scan the grant corpus
         </button>
       </div>
       {error && <p className="mt-4 text-[12.5px] text-danger">{error}</p>}

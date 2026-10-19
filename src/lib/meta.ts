@@ -33,4 +33,9 @@ export const KIND_LABEL: Record<FindingKind, string> = {
   terminology: "Outdated terminology",
   altered: "Altered after registration",
   citation: "Authority not found",
+  omission: "Leaves something out",
+  "coverage-gap": "Hidden from the AI",
+  "out-of-scope": "Outside the AI's sources",
+  "ai-unreviewed": "Unreviewed AI content",
+  "superseded-copy": "Old version still live",
 };

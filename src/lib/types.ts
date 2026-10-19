@@ -15,7 +15,12 @@ export type FindingKind =
   | "echo"
   | "terminology"
   | "altered"
-  | "citation";
+  | "citation"
+  | "omission"
+  | "coverage-gap"
+  | "out-of-scope"
+  | "ai-unreviewed"
+  | "superseded-copy";
 
 export interface SourceDoc {
   id: string;
@@ -27,6 +32,14 @@ export interface SourceDoc {
   docType?: string | null;
   docStatus?: string | null;
   sha256?: string;
+  /** From the document's own front matter, when it has any. */
+  recordStatus?: string | null;
+  series?: string | null;
+  version?: number | null;
+  inAiScope?: boolean | null;
+  aiGenerated?: boolean;
+  custody?: string[];
+  frontId?: string | null;
 }
 
 export type ClaimStatus = "corroborated" | "current" | "single" | "review" | "superseded";

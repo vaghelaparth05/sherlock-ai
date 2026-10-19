@@ -1,3 +1,4 @@
+import { parseFrontMatter, stripFrontMatter } from "@/lib/frontmatter";
 import { NUMBER_TOKEN, numberFromToken, stripHtml } from "@/lib/text";
 import type { Assistance, DocInput, ExtractedClaim, ExtractedDoc, ScanProvider } from "@/lib/scanner/types";
 
@@ -55,8 +56,19 @@ function statusOf(s: string | undefined): ExtractedDoc["status"] {
   if (v.includes("supersed")) return "superseded";
   if (v.includes("draft")) return "draft";
   if (v.includes("withdraw")) return "withdrawn";
-  if (v.includes("current")) return "current";
+  if (v.includes("current") || v === "declared" || v === "final") return "current";
   return "unknown";
+}
+
+const humanise = (s: string) => {
+  const t = s.replace(/_/g, " ").trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+};
+
+/** "Department of Regional Recovery" if the text names one. Used when a record has no producer organisation. */
+function departmentIn(text: string): string {
+  const m = text.match(/Department of ([A-Z][a-z]+(?: [A-Z][a-z]+){0,3})/);
+  return m ? `Department of ${m[1]}` : "";
 }
 
 function cleanHeading(h: string): string {
@@ -186,11 +198,87 @@ function extractClaims(text: string, authorityNumbers: string[]): ExtractedClaim
   return claims;
 }
 
+const fmtMoney = (n: number) => `$${n.toLocaleString("en-US")}`;
+const DATE_WORDS = "\\d{1,2}\\s+[A-Z][a-z]+\\s+\\d{4}";
+
+/**
+ * Facts about a grant or service: the income limit, amounts, deadline, fee, payment method,
+ * eligibility conditions, and what evidence of address is accepted (including exceptions).
+ */
+function programClaims(items: { sentence: string; heading: string }[], body: string): ExtractedClaim[] {
+  const out: ExtractedClaim[] = [];
+  const push = (c: Pick<ExtractedClaim, "subject" | "attribute" | "value" | "quote"> & { appliesTo?: string }) =>
+    out.push({ effectiveFrom: null, basedOn: null, appliesTo: c.appliesTo ?? null, subject: c.subject, attribute: c.attribute, value: c.value, quote: c.quote });
+
+  const remote = /remote communit/i.test(body);
+  let turnedAway = false;
+  const cond: { owner?: string; residence?: string; area?: string } = {};
+
+  for (const { sentence: s } of items) {
+    const income =
+      s.match(/income\s+(?:below|under|less than)\s+\$([\d,]+)/i) ??
+      s.match(/earning\s+less\s+than\s+\$([\d,]+)/i) ??
+      s.match(/income threshold from \$[\d,]+ to \$([\d,]+)/i);
+    if (income) push({ subject: "household income", attribute: "income_threshold", value: `$${income[1]}`, quote: s });
+
+    if (/owner-occupiers? only|only owner-occupiers?/i.test(s)) {
+      push({ subject: "tenure", attribute: "tenure_requirement", value: "owner-occupiers only", quote: s });
+      cond.owner ??= s;
+    }
+    if (/principal place of residence|main residence|main home/i.test(s)) cond.residence ??= s;
+    if (/declared (?:\w+ )?disaster area|flood-affected area/i.test(s)) cond.area ??= s;
+
+    const deadline = s.match(new RegExp(`\\bclos(?:e|es|ing)\\b[^.]*?(${DATE_WORDS})`)) ?? s.match(new RegExp(`until\\s+(${DATE_WORDS})\\s+to\\s+lodge`));
+    if (deadline) push({ subject: "applications", attribute: "application_deadline", value: deadline[1], quote: s });
+
+    if (/no fee is charged|never charged a fee|does not charge applicants any fee|applying is free|free to apply/i.test(s)) {
+      push({ subject: "applications", attribute: "application_fee", value: "none", quote: s });
+    }
+
+    if (/electronic funds transfer/i.test(s) && /(own (?:bank )?account|own name)/i.test(s)) {
+      push({ subject: "grant payments", attribute: "payment_method", value: "electronic funds transfer to applicant's own account", quote: s });
+    }
+
+    const amounts = [...s.matchAll(/\$([\d,]+)/g)].map((x) => Number(x[1].replace(/,/g, "")));
+    if (amounts.length >= 2 && /tier|contents|structural/i.test(s)) {
+      push({ subject: "grant payment per household", attribute: "payment_amount", value: [...new Set(amounts)].sort((a, b) => a - b).map(fmtMoney).join(", "), quote: s });
+    } else {
+      const flat = s.match(/(?:every|each|all)\s+eligible\s+households?\s+(?:will\s+)?(?:receives?|gets?)\s+\$([\d,]+)/i);
+      if (flat) push({ subject: "grant payment per household", attribute: "payment_amount", value: `$${flat[1]}`, quote: s });
+    }
+
+    if (/remote communit/i.test(s) && /statutory declaration|letter from a community organi[sz]ation/i.test(s)) {
+      push({ subject: "proof of address", attribute: "proof_of_address_requirement", value: "statutory declaration or community letter", quote: s, appliesTo: "remote communities" });
+    } else if (/proof of address/i.test(s) && /utility bill/i.test(s) && /lease/i.test(s) && !/instead of/i.test(s)) {
+      push({ subject: "proof of address", attribute: "proof_of_address_requirement", value: "utility bill or lease", quote: s });
+    }
+    if (!turnedAway && /(told they could not apply|turned away|could not apply)/i.test(s) && /(utility bill|lease)/i.test(s)) {
+      turnedAway = true;
+      push({
+        subject: "proof of address",
+        attribute: "proof_of_address_requirement",
+        value: "turned away without a utility bill or lease",
+        quote: s,
+        appliesTo: remote ? "remote communities" : "applicants without a bill or lease",
+      });
+    }
+  }
+
+  // A document that lists several eligibility conditions presents itself as the eligibility summary.
+  const found = [cond.owner && "owner-occupiers only", cond.residence && "principal place of residence", cond.area && "inside the declared disaster area"].filter(Boolean) as string[];
+  if (found.length >= 2) {
+    push({ subject: "grant eligibility", attribute: "eligibility_conditions", value: found.join("; "), quote: cond.owner ?? cond.residence ?? cond.area ?? "" });
+  }
+  return out;
+}
+
 function extract(doc: DocInput): ExtractedDoc {
   const raw = doc.text ?? "";
-  const text = doc.ext === "html" || doc.ext === "htm" ? stripHtml(raw) : raw;
-  const header = parseHeader(text);
-  const producedBy = header["produced by"] ?? "Unknown";
+  const fm = parseFrontMatter(raw);
+  const stripped = doc.ext === "html" || doc.ext === "htm" ? stripHtml(raw) : raw;
+  const text = fm ? stripFrontMatter(stripped) : stripped;
+  const header: Record<string, string> = fm ? {} : parseHeader(text);
+  const producedBy = fm?.unit ?? header["produced by"] ?? "Unknown";
   const authorityNumbers = [...new Set([...text.matchAll(AUTH_RE)].map((m) => m[1]))];
 
   // "Based on: <title>." lines name the document this one was copied from.
@@ -198,6 +286,8 @@ function extract(doc: DocInput): ExtractedDoc {
 
   const isTabular = doc.ext === "csv" || doc.ext === "json";
   const claims = isTabular ? [] : extractClaims(text, authorityNumbers);
+  if (!isTabular) claims.push(...programClaims(sentencesWithHeadings(text), text));
+  const aiGenerated = fm?.recordStatus === "ai_generated" || /generated by (?:an )?AI assistant|this summary was generated by (?:an )?AI/i.test(text);
 
   const languageFlags: ExtractedDoc["languageFlags"] = [];
   if (!isTabular) {
@@ -210,13 +300,15 @@ function extract(doc: DocInput): ExtractedDoc {
     }
   }
 
+  const dateText = fm?.date ?? header.date;
   return {
-    title: header.title ?? doc.name,
+    title: fm?.title ?? header.title ?? doc.name,
     producedBy,
-    organisation: organisationOf(producedBy),
-    date: header.date && /^\d{4}-\d{2}-\d{2}$/.test(header.date) ? header.date : null,
-    docType: header.type ?? "Document",
-    status: statusOf(header.status),
+    organisation: fm ? departmentIn(text) : organisationOf(producedBy),
+    date: dateText && /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? dateText : null,
+    docType: fm ? humanise(fm.series ?? fm.function ?? "document") : (header.type ?? "Document"),
+    status: statusOf(fm?.recordStatus ?? header.status),
+    aiGenerated,
     refersTo,
     authorityNumbers,
     claims,
@@ -236,6 +328,11 @@ const RECOMMEND: Record<string, { rec: Assistance["recommendation"]; action: str
   echo: { rec: "needs_human", action: "Link the repeating pages to the original source instead of restating it." },
   terminology: { rec: "needs_human", action: "Review the description for reparative description, ideally with the communities the records concern." },
   representation: { rec: "needs_human", action: "Consider seeking documents from other organisations or perspectives." },
+  omission: { rec: "confirm", action: "Add the missing conditions to the summary, or replace it with the authoritative wording, before anyone relies on it." },
+  "coverage-gap": { rec: "confirm", action: "Bring the record into the AI's sources, or tell users the AI cannot see it, so answers stop contradicting it." },
+  "out-of-scope": { rec: "needs_human", action: "Decide whether the AI should be given this record, and say so wherever the AI answers questions." },
+  "ai-unreviewed": { rec: "confirm", action: "Have a person check the AI-written content against the authoritative records and correct it before it is used." },
+  "superseded-copy": { rec: "confirm", action: "Withdraw or update the old version so only the current one is live." },
 };
 
 export const rulesProvider: ScanProvider = {

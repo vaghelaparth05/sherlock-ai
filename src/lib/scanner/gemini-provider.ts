@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   AiReviewSchema,
   AssistSchema,
-  ATTRIBUTES,
+  KNOWN_ATTRIBUTES,
   ExtractedDocSchema,
   type AssistInput,
   type Assistance,
@@ -118,26 +118,32 @@ async function generateJson<T>(schema: z.ZodType<T>, system: string, parts: Part
 
 /* ---------- prompts ---------- */
 
-const EXTRACT_SYSTEM = `You extract structured recordkeeping facts from documents for an archivist working with the National Archives of Australia (NAA).
+const EXTRACT_SYSTEM = `You extract structured facts from documents for an information manager (the National Archives of Australia and agencies it works with). The documents can be records authorities, policies, guidelines, procedures, FAQs, scripts, briefings, minutes, emails or newsletters.
 
-You only EXTRACT. You do not judge, compare, or decide what is true.
+You only EXTRACT. You do not judge, compare, or decide what is true. Other software compares documents; your job is to read each one faithfully so that comparison is possible.
 
 Rules:
 - Quote exactly. Every claim's "quote" must be a sentence copied word for word from the document.
-- Extract only statements about: how long records are kept (retention_period), when records transfer to the National Archives (transfer_age), when records open to the public (access_period), disposal actions, security classifications, or who is the custodian. Use "other" only for a figure that is calculated from or assumes one of those values, and then fill "basedOn".
-- Write "value" in a normal form. Durations as "<number> years" (convert "seven" to "7 years"). Money as "$412,000".
-- "subject" is a short lower-case noun phrase for what the statement is about, for example "grant application files". Use the same phrase for the same thing across a document.
-- For access_period use the subject "public access to commonwealth records".
+- Extract every concrete, checkable rule or figure the document states as fact: how long records are kept, eligibility limits, payment amounts, deadlines, fees, payment methods, tenure or residency conditions, proof requirements, who is covered. Skip opinion, greetings and filler.
+- "attribute" is a snake_case name for the kind of fact. Prefer these names: ${KNOWN_ATTRIBUTES.filter((a) => a !== "other").join(", ")}. If none fits, invent a short snake_case name rather than using "other". Use the SAME name for the same kind of fact in every document.
+- Normalise "value": durations as "<number> years" ("seven" becomes "7 years"), money as "$120,000", dates as "31 October 2026". For payment_amount list every amount stated, for example "$2,000, $5,000, $10,000", or the flat amount if everyone gets the same. For eligibility_conditions put every condition in one value, separated by "; ".
+- Do NOT extract measurements that change over time or are only reported (counts of applications, average processing days, totals paid). Extract rules, not statistics.
+- "subject" is a short lower-case noun phrase for what the statement is about. Use the same phrase for the same thing across a document.
+- "appliesTo": set it only when the statement is an exception or covers a narrower group than everyone (for example "remote communities"). Otherwise null.
+- "effectiveFrom": the date a change takes effect, if stated, else null.
+- "basedOn": if a figure is calculated from or assumes another stated value, that value; otherwise null.
 - "refersTo": titles of OTHER documents this one says it is based on or copied from. Empty if none.
 - "authorityNumbers": every Records Authority number mentioned anywhere, in the form 2024/00561247.
 - "status": current, draft, superseded, withdrawn or unknown, from what the document says about itself.
+- "aiGenerated": true only if the document itself says an AI assistant wrote or summarised it.
 - "languageFlags": quote wording that is outdated, gendered, or may be harmful or demeaning to the people the records concern (for example historical terms for Aboriginal and Torres Strait Islander peoples), and say why in one short sentence. Do not flag neutral legal or technical terms unless the wording itself is a concern.
 - If something is not stated in the document, use null or an empty list. Never guess.
 - "date" is the date of the document as YYYY-MM-DD, or null.
-- "organisation" is the short name of the organisation that produced it (for example "NAA" for the National Archives of Australia, or an agency acronym).`;
+- "organisation" is the short name of the organisation that produced it (for example "NAA" or an agency acronym or name).
+- A front-matter block at the top (between --- lines) states the record's own id, version and status. Treat it as metadata, not as a claim.`;
 
 function extractPrompt(doc: DocInput): string {
-  return `Extract the structured facts from this document.\nFile name: ${doc.name}\nAllowed attributes: ${ATTRIBUTES.join(", ")}\n`;
+  return `Extract the structured facts from this document.\nFile name: ${doc.name}\n`;
 }
 
 const REVIEW_SYSTEM = `You are a careful second reviewer for an archivist. You are given ONE finding that a deterministic engine raised, with the evidence it relied on. Decide whether the evidence supports the finding.

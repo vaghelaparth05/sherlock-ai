@@ -240,11 +240,11 @@ export function ImportView() {
     setItems([]);
   }, [items]);
 
-  async function loadSample() {
+  async function loadSample(set: "naa" | "corpus") {
     setSampleBusy(true);
     setError("");
     try {
-      const s = await postJson<{ id: string; added: number; total: number }>("/api/samples/naa", {});
+      const s = await postJson<{ id: string; added: number; total: number }>(`/api/samples/${set}`, {});
       const list = await refreshCollections();
       await openCollection(s.id, list);
       setTab("upload");
@@ -351,13 +351,29 @@ export function ImportView() {
                     </p>
                     <button
                       type="button"
-                      onClick={loadSample}
+                      onClick={() => loadSample("naa")}
                       disabled={sampleBusy}
                       className="mt-4 inline-flex items-center gap-2 rounded-md bg-fg px-3.5 py-2 text-[13px] font-medium text-bg transition hover:bg-white active:scale-[0.97] disabled:opacity-60"
                     >
                       {sampleBusy && <LoaderCircle className="size-3.5 animate-spin" />}
                       Load the 10 sample documents
                     </button>
+                    <div className="mt-6 border-t border-line pt-5">
+                      <p className="text-[15px] font-medium">Household relief grant corpus (synthetic)</p>
+                      <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted">
+                        Nineteen records about one grant program: two versions of the guidelines, scripts, an intranet FAQ, minutes, procedures, newsletters and an AI-generated
+                        summary. Old figures survive in places, some records the AI cannot see contradict what it says, and the AI summary was never reviewed.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => loadSample("corpus")}
+                        disabled={sampleBusy}
+                        className="mt-4 inline-flex items-center gap-2 rounded-md bg-fg px-3.5 py-2 text-[13px] font-medium text-bg transition hover:bg-white active:scale-[0.97] disabled:opacity-60"
+                      >
+                        {sampleBusy && <LoaderCircle className="size-3.5 animate-spin" />}
+                        Load the 19 corpus documents
+                      </button>
+                    </div>
                   </div>
                 )}
               </motion.div>

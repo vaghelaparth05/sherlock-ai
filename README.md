@@ -83,6 +83,8 @@ Originals are never modified; their SHA-256 is stored on arrival.
 
 Expected result with the offline scanner: 11 findings (5 misinformation, 4 bias, 2 disinformation). `npm run scan:samples` runs the engine on them from the command line.
 
+`samples/corpus/` holds 19 records about one grant program (two guideline versions, scripts, FAQs, minutes, an AI-generated summary). Records may start with a front-matter block (`id`, `series`, `version`, `record_status`, `in_ai_scope`, `custody`, `cites`) which code reads exactly. Load it from Import, or run `npm run scan:samples -- corpus`. Expected with the offline scanner: 10 findings (6 misinformation, 3 bias, 1 disinformation), including the **Unreviewed AI content** tab, which lists AI-written documents and everything wrong with them. Add `gemini` to the command to scan with Gemini.
+
 ## Database import
 
 On the Import page, the **Database** tab connects read-only to a PostgreSQL database, lists its tables, and stores the first 1,000 rows of each chosen table as a CSV document. **Use the demo database** creates a small `naa_demo` schema in Sherlock's own database so it can be shown without another server. Other engines are not supported yet.
@@ -133,6 +135,7 @@ Sherlock POSTs `{ "name", "ext", "sha256", "text", "base64" }` (`text` is null f
 | `src/lib/repo.ts`, `src/lib/db` | Database access and schema |
 | `src/components` | Screens: dashboard, import, scan, results, sources, review, summary |
 | `samples/naa` | The 10 synthetic documents |
+| `samples/corpus` | The 19 grant program records |
 | `docs`, `prototype` | Original design document and the first clickable prototype |
 
 ## Limits worth knowing

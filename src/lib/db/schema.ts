@@ -74,6 +74,15 @@ create table if not exists scan_documents (
   primary key (scan_id, document_id)
 );
 
+-- Facts read from a document's own front matter. Added in place, so existing databases keep their data.
+alter table scan_documents add column if not exists record_status text;
+alter table scan_documents add column if not exists series text;
+alter table scan_documents add column if not exists version integer;
+alter table scan_documents add column if not exists in_ai_scope boolean;
+alter table scan_documents add column if not exists ai_generated boolean not null default false;
+alter table scan_documents add column if not exists custody text[] not null default '{}';
+alter table scan_documents add column if not exists front_id text;
+
 create table if not exists claims (
   id uuid primary key default gen_random_uuid(),
   scan_id uuid not null references scans(id) on delete cascade,

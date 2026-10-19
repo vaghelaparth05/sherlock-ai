@@ -14,6 +14,7 @@ import { ErrorBlock, NoScans, Skeleton } from "@/components/page-states";
 import { FilterBar } from "@/components/results/filter-bar";
 import { FindingCard } from "@/components/results/finding-card";
 import { FindingDrawer } from "@/components/results/finding-drawer";
+import { AiContentPanel, aiContentOf } from "@/components/results/ai-content-panel";
 import { SourceList } from "@/components/results/source-list";
 import { postJson, timeAgo, useResults, useScanId, withScan } from "@/lib/client";
 import { TYPE_META } from "@/lib/meta";
@@ -26,7 +27,7 @@ export function ResultsView() {
   const router = useRouter();
   const { scanId, ready } = useScanId();
   const { data, error, loading, reload, setData } = useResults(scanId);
-  const [view, setView] = useState<"findings" | "sources">("findings");
+  const [view, setView] = useState<"findings" | "sources" | "ai">("findings");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -75,10 +76,12 @@ export function ResultsView() {
 
   const hasPrevious = findings.some((f) => !f.isNew);
   const sourceCount = new Set(data.docs.map((d) => d.source)).size;
-  const tab = view === "sources" ? "sources" : filters.type;
-  const tabs: { id: "all" | FindingType | "sources"; label: string; count: number }[] = [
+  const tab = view === "sources" ? "sources" : view === "ai" ? "ai" : filters.type;
+  const aiCount = aiContentOf(data.docs, findings).ai.length;
+  const tabs: { id: "all" | FindingType | "sources" | "ai"; label: string; count: number }[] = [
     { id: "all", label: "All findings", count: summary.total },
     ...TYPES.map((t) => ({ id: t, label: TYPE_META[t].label, count: summary.byType[t].total })),
+    { id: "ai", label: "Unreviewed AI content", count: aiCount },
     { id: "sources", label: "Sources", count: sourceCount },
   ];
   const filtersActive = filters.type !== "all" || filters.severity !== "all" || filters.query !== "" || filters.status !== "open";
@@ -178,6 +181,7 @@ export function ResultsView() {
                 aria-selected={tab === t.id}
                 onClick={() => {
                   if (t.id === "sources") setView("sources");
+                  else if (t.id === "ai") setView("ai");
                   else {
                     setView("findings");
                     setFilters((f) => ({ ...f, type: t.id as Filters["type"] }));
@@ -193,7 +197,11 @@ export function ResultsView() {
           </div>
 
           <AnimatePresence mode="wait" initial={false}>
-            {view === "sources" ? (
+            {view === "ai" ? (
+              <motion.div key="ai" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                <AiContentPanel docs={data.docs} findings={findings} onOpen={setSelectedId} />
+              </motion.div>
+            ) : view === "sources" ? (
               <motion.div key="sources" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
                 <SourceList stats={stats} scanId={scanId} />
               </motion.div>

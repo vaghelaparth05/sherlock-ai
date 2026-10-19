@@ -288,15 +288,41 @@ export async function listScanDocuments(scanId: string): Promise<ScanDocState[]>
 export async function setScanDocument(
   scanId: string,
   documentId: string,
-  patch: { status: "reading" | "done" | "error"; title?: string; source?: string; date?: string | null; year?: number | null; docType?: string; docStatus?: string; claimCount?: number; error?: string; meta?: unknown },
+  patch: {
+    status: "reading" | "done" | "error";
+    title?: string;
+    source?: string;
+    date?: string | null;
+    year?: number | null;
+    docType?: string;
+    docStatus?: string;
+    claimCount?: number;
+    error?: string;
+    meta?: unknown;
+    recordStatus?: string | null;
+    series?: string | null;
+    version?: number | null;
+    inAiScope?: boolean | null;
+    aiGenerated?: boolean;
+    custody?: string[];
+    frontId?: string | null;
+  },
 ) {
   await query(
     `update scan_documents set status = $3,
        title = coalesce($4, title), source = coalesce($5, source), doc_date = coalesce($6::date, doc_date), year = coalesce($7, year),
        doc_type = coalesce($8, doc_type), doc_status = coalesce($9, doc_status), claim_count = coalesce($10, claim_count),
-       error = $11, meta = coalesce($12::jsonb, meta)
+       error = $11, meta = coalesce($12::jsonb, meta),
+       record_status = coalesce($13, record_status), series = coalesce($14, series), version = coalesce($15, version),
+       in_ai_scope = coalesce($16, in_ai_scope), ai_generated = coalesce($17, ai_generated),
+       custody = coalesce($18::text[], custody), front_id = coalesce($19, front_id)
      where scan_id = $1 and document_id = $2`,
-    [scanId, documentId, patch.status, patch.title ?? null, patch.source ?? null, patch.date ?? null, patch.year ?? null, patch.docType ?? null, patch.docStatus ?? null, patch.claimCount ?? null, patch.error ?? null, patch.meta ? JSON.stringify(patch.meta) : null],
+    [
+      scanId, documentId, patch.status, patch.title ?? null, patch.source ?? null, patch.date ?? null, patch.year ?? null,
+      patch.docType ?? null, patch.docStatus ?? null, patch.claimCount ?? null, patch.error ?? null, patch.meta ? JSON.stringify(patch.meta) : null,
+      patch.recordStatus ?? null, patch.series ?? null, patch.version ?? null, patch.inAiScope ?? null, patch.aiGenerated ?? null,
+      patch.custody ?? null, patch.frontId ?? null,
+    ],
   );
 }
 
@@ -393,7 +419,8 @@ export async function getResults(scanId: string): Promise<ResultsPayload | null>
 
   const [docs, claims, findings] = await Promise.all([
     query(
-      `select d.id, d.name, d.sha256, sd.title, sd.source, sd.year, sd.doc_date, sd.doc_type, sd.doc_status
+      `select d.id, d.name, d.sha256, sd.title, sd.source, sd.year, to_char(sd.doc_date, 'YYYY-MM-DD') as doc_date, sd.doc_type, sd.doc_status,
+              sd.record_status, sd.series, sd.version, sd.in_ai_scope, sd.ai_generated, sd.custody, sd.front_id
          from scan_documents sd join documents d on d.id = sd.document_id where sd.scan_id = $1 order by d.name`,
       [scanId],
     ),
@@ -406,10 +433,17 @@ export async function getResults(scanId: string): Promise<ResultsPayload | null>
     title: x.title ?? x.name,
     source: x.source ?? "Unknown",
     year: x.year ?? 0,
-    date: x.doc_date ? new Date(x.doc_date).toISOString().slice(0, 10) : null,
+    date: x.doc_date ?? null,
     docType: x.doc_type,
     docStatus: x.doc_status,
     sha256: x.sha256,
+    recordStatus: x.record_status ?? null,
+    series: x.series ?? null,
+    version: x.version ?? null,
+    inAiScope: x.in_ai_scope ?? null,
+    aiGenerated: x.ai_generated === true,
+    custody: x.custody ?? [],
+    frontId: x.front_id ?? null,
   }));
   const claimList: Claim[] = claims.rows.map((x) => ({
     id: x.id, text: x.text, origin: x.origin_doc, citedBy: x.cited_by, status: x.status, attribute: x.attribute, subject: x.subject, value: x.value,

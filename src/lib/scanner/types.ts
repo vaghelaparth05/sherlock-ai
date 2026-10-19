@@ -1,31 +1,61 @@
 import { z } from "zod";
 import type { AiReview, Evidence, FindingKind, FindingType, Severity } from "@/lib/types";
 
-/** Controlled vocabulary the scanner uses so claims from different documents can be compared. */
-export const ATTRIBUTES = [
+/**
+ * Names the scanner prefers for facts that different documents repeat or contradict. A scanner may
+ * invent another snake_case name when none fits; the engine maps common synonyms back to these.
+ */
+export const KNOWN_ATTRIBUTES = [
+  // recordkeeping
   "retention_period", // how long records are kept before destruction, e.g. "10 years"
   "transfer_age", // age at which records move to the National Archives, e.g. "15 years"
   "access_period", // years before records open to public access, e.g. "20 years"
   "disposal_action", // e.g. "retain as national archives"
   "security_classification",
   "custodian",
+  // programs and services
+  "income_threshold", // e.g. "$120,000"
+  "payment_amount", // every amount stated, e.g. "$2,000, $5,000, $10,000"
+  "application_deadline", // e.g. "31 October 2026"
+  "application_fee", // "none" or an amount
+  "payment_method", // e.g. "electronic funds transfer to applicant's own account"
+  "tenure_requirement", // e.g. "owner-occupiers only"
+  "proof_of_address_requirement", // e.g. "utility bill or lease"
+  "eligibility_conditions", // every condition in one list, separated by "; "
   "other",
 ] as const;
-export type Attribute = (typeof ATTRIBUTES)[number];
+/** Free-form on purpose: a scanner can name any fact two documents might disagree about. */
+export type Attribute = string;
+export const ATTRIBUTES = KNOWN_ATTRIBUTES;
 
 /** These describe one rule for the whole collection, so the subject is ignored when grouping. */
-export const GLOBAL_ATTRIBUTES: Attribute[] = ["access_period", "security_classification"];
+export const GLOBAL_ATTRIBUTES: string[] = [
+  "access_period",
+  "security_classification",
+  "income_threshold",
+  "payment_amount",
+  "application_deadline",
+  "application_fee",
+  "payment_method",
+  "tenure_requirement",
+  "proof_of_address_requirement",
+];
 
 export const ExtractedClaimSchema = z.object({
   subject: z.string().describe("What the statement is about, as a short noun phrase, e.g. 'grant application files'"),
-  attribute: z.enum(ATTRIBUTES),
-  value: z.string().describe("The stated value, e.g. '10 years' or '$412,000'"),
+  attribute: z.string().describe("The kind of fact, as a snake_case name. Prefer one of the known names."),
+  value: z.string().describe("The stated value, e.g. '10 years', '$412,000' or '31 October 2026'"),
   quote: z.string().describe("The exact sentence from the document that states it"),
   effectiveFrom: z.string().nullable().describe("YYYY-MM-DD if the statement says when it takes effect, otherwise null"),
+  appliesTo: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Only if the statement is an exception or applies to a narrower group than everyone (for example 'remote communities'); otherwise null"),
   basedOn: z
     .object({
       subject: z.string(),
-      attribute: z.enum(ATTRIBUTES),
+      attribute: z.string(),
       value: z.string(),
     })
     .nullable()
@@ -39,6 +69,7 @@ export const ExtractedDocSchema = z.object({
   date: z.string().nullable().describe("Document date as YYYY-MM-DD, or null"),
   docType: z.string().describe("e.g. Records Authority, Policy, Guide, FAQ, Register, Budget paper"),
   status: z.enum(["current", "draft", "superseded", "withdrawn", "unknown"]),
+  aiGenerated: z.boolean().optional().describe("True only if the document itself says an AI wrote or summarised it"),
   refersTo: z.array(z.string()).describe("Titles of other documents this one says it is based on"),
   authorityNumbers: z.array(z.string()).describe("Every Records Authority number mentioned, e.g. 2024/00561247"),
   claims: z.array(ExtractedClaimSchema),
@@ -47,8 +78,19 @@ export const ExtractedDocSchema = z.object({
     .describe("Outdated, biased or harmful terminology, with the exact words and why they are a concern"),
 });
 
+/** Facts read from a document's own front matter by code (never by the AI). */
+export interface DocMeta {
+  frontId?: string | null;
+  series?: string | null;
+  version?: number | null;
+  recordStatus?: string | null;
+  inAiScope?: boolean | null;
+  custody?: string[];
+  cites?: string[];
+}
+
 export type ExtractedClaim = z.infer<typeof ExtractedClaimSchema>;
-export type ExtractedDoc = z.infer<typeof ExtractedDocSchema>;
+export type ExtractedDoc = z.infer<typeof ExtractedDocSchema> & DocMeta;
 
 export const AiReviewSchema = z.object({
   verdict: z.enum(["agree", "disagree", "unsure"]),
