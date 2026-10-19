@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "a2914d3c85b6a50fa8b108352117a41b9b0e0b1109a09cea2b8b1a92bed25faf",
+  "created_at": "2026-10-19T01:38:01.108Z",
+  "output": {
+    "type": "contradicts",
+    "confidence": 0.8,
+    "rationale": "The older claim is a declared guideline saying grants are paid by EFT into the applicant's own account, while the newer one comes from an unknown unit with external custody and unknown status. It tells applicants to pay money into a specific account, so it conflicts with the declared record and cannot legitimately replace it, and it may be a scam."
+  }
+}

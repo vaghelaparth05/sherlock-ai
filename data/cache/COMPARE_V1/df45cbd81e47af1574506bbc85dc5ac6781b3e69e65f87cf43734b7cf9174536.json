@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "df45cbd81e47af1574506bbc85dc5ac6781b3e69e65f87cf43734b7cf9174536",
+  "created_at": "2026-10-19T01:38:01.534Z",
+  "output": {
+    "type": "contradicts",
+    "confidence": 0.88,
+    "rationale": "The newer claim tells applicants to pay into a specific account, which cannot be true alongside the declared internal audit statement that the department never asks applicants to pay. It comes from an unknown business unit, with unknown record status and external custody, so it has no legitimate authority to replace the declared record."
+  }
+}

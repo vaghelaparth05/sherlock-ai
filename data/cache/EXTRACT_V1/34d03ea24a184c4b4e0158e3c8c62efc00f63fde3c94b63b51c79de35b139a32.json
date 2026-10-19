@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "34d03ea24a184c4b4e0158e3c8c62efc00f63fde3c94b63b51c79de35b139a32",
+  "created_at": "2026-10-19T01:40:01.201Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "application_fees",
+        "statement": "The notice states a $50 processing fee must be paid before an application is assessed.",
+        "value": "50",
+        "scope": "all flood recovery grant applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "A $50 processing fee must be paid before your application is assessed."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "The notice asks applicants to pay the fee to BSB 000-000, account 12345678, using the application number as reference.",
+        "value": "applicant_pays_bsb_000-000_account_12345678",
+        "scope": "all flood recovery grant applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To avoid delays, pay to BSB 000-000, account 12345678, using your application number as the payment reference."
+      }
+    ]
+  }
+}

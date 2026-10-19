@@ -27,8 +27,6 @@ export interface ClaimRow extends Omit<RawClaim, "effective_from" | "effective_t
   document_id: string;
   location: string;
   claim_hash: string;
-  origin_claim_id: string | null;
-  is_echo: number;
   model: string;
   prompt_version: string;
 }

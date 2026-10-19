@@ -3,10 +3,11 @@ import { db, transaction } from "./db.ts";
 import { sha256 } from "./hash.ts";
 import { allEntries, append, entriesFor, type LedgerEntry } from "./ledger.ts";
 import { allDocuments, getDocument, type DocumentRow } from "./ingest.ts";
-import { allClaims, claimsFor, type ClaimRow } from "./extract.ts";
+import { allClaims, claimsFor } from "./extract.ts";
 import { taxonomy } from "./config.ts";
-import { scoreDocument, type ClaimFacts, type DocFacts, type DocumentScore } from "./scoring.ts";
+import { scoreDocument, type DocFacts, type DocumentScore } from "./scoring.ts";
 import { decideGate, type GateDecision, type Override } from "./gate.ts";
+import { allRelationships, claimStates, decisions, groupKey, type ClaimState } from "./relate.ts";
 
 /**
  * The risk register: recomputes every document's score and gate from documents, claims
@@ -47,25 +48,19 @@ function laterDeclaredVersion(doc: DocumentRow, docs: DocumentRow[]): boolean {
   );
 }
 
-// ponytail: until relationships land (P1) no claim is superseded or contradicted, and echoes are not yet detected.
-function claimFacts(doc: DocumentRow, claims: ClaimRow[], docsById: Map<string, DocumentRow>): ClaimFacts[] {
-  return claims
-    .filter((c) => c.document_id === doc.id)
-    .map((c) => {
-      const sameValue = claims.filter((o) => o.document_id !== doc.id && o.subject === c.subject && o.value === c.value);
-      const fromRecords = sameValue.filter((o) => docsById.get(o.document_id)!.record_status !== "ai_generated");
-      const units = new Set(
-        fromRecords.filter((o) => !o.is_echo).map((o) => docsById.get(o.document_id)!.unit).filter((u) => u !== doc.unit),
-      );
-      const unsupported = doc.record_status === "ai_generated" && fromRecords.length === 0;
-      return {
-        id: c.id,
-        status: unsupported ? "unsupported" : "current",
-        supersededChanged: false,
-        contradicted: false,
-        agreements: units.size,
-      };
-    });
+/** Everything the derived state is computed from: documents, claims, relationships and ledger decisions. */
+export function snapshot() {
+  const docs = allDocuments();
+  const claims = allClaims();
+  const docsById = new Map(docs.map((d) => [d.id, d]));
+  const relationships = allRelationships();
+  const decided = decisions();
+  return { docs, claims, docsById, relationships, decided, states: claimStates(claims, docsById, relationships, decided) };
+}
+
+/** Initial scope plus every SCOPE_ADD. */
+export function inAiScope(doc: DocumentRow): boolean {
+  return doc.in_ai_scope_initial === 1 || entriesFor(doc.id, "SCOPE_ADD").length > 0;
 }
 
 function overridesFor(id: string): Override[] {
@@ -80,13 +75,11 @@ function overridesFor(id: string): Override[] {
 interface ScoreDetail {
   score: DocumentScore | null;
   gate: GateDecision;
-  claims: ClaimFacts[];
+  claims: ClaimState[];
 }
 
 export function rescoreAll(): void {
-  const docs = allDocuments();
-  const claims = allClaims();
-  const docsById = new Map(docs.map((d) => [d.id, d]));
+  const { docs, claims, states } = snapshot();
   const extracted = new Set(allEntries().filter((e) => e.action === "EXTRACT").map((e) => e.target_id));
   const now = new Date().toISOString();
 
@@ -101,7 +94,7 @@ export function rescoreAll(): void {
         laterDeclaredVersion: laterDeclaredVersion(doc, docs),
         tampered: checkTamper(doc),
       };
-      const cf = claimFacts(doc, claims, docsById);
+      const cf = claims.filter((c) => c.document_id === doc.id).map((c) => states.get(c.id)!);
       const scored = extracted.has(doc.id);
       const score = scored ? scoreDocument(facts, cf, today()) : null;
       const gate = decideGate({
@@ -165,7 +158,7 @@ function summary(doc: DocumentRow, s: ScoreRow | undefined) {
     custody: JSON.parse(doc.custody) as string[],
     recordStatus: doc.record_status,
     date: doc.date,
-    inAiScope: doc.in_ai_scope_initial === 1,
+    inAiScope: inAiScope(doc),
     trust: s?.trust ?? null,
     likelihood: s?.likelihood ?? null,
     consequence: s?.consequence ?? null,
@@ -201,6 +194,11 @@ export function documentDetail(id: string) {
     location: c.location,
     status: facts.get(c.id)?.status ?? "current",
     agreements: facts.get(c.id)?.agreements ?? 0,
+    originId: facts.get(c.id)?.originId ?? c.id,
+    echoOf: facts.get(c.id)?.echoOf ?? null,
+    replacedBy: facts.get(c.id)?.replacedBy ?? null,
+    contradictedBy: facts.get(c.id)?.contradictedBy ?? [],
+    provisional: facts.get(c.id)?.provisional ?? false,
     corroboration: detail?.score?.corroboration.perClaim[c.id] ?? null,
     model: c.model,
     promptVersion: c.prompt_version,
@@ -243,4 +241,43 @@ export function overrideGate(id: string, actor: string, reason: string) {
   });
   rescoreAll();
   return documentDetail(id);
+}
+
+/** Origin, echoes, independent agreement, relationships and status history for one claim. */
+export function claimDetail(id: string) {
+  const { claims, docsById, relationships, decided, states } = snapshot();
+  const claim = claims.find((c) => c.id === id);
+  if (!claim) return null;
+  const brief = (claimId: string) => {
+    const c = claims.find((x) => x.id === claimId)!;
+    const d = docsById.get(c.document_id)!;
+    return { id: c.id, documentId: d.id, documentTitle: d.title, unit: d.unit, date: d.date, value: c.value, quote: c.quote, location: c.location, status: states.get(c.id)!.status };
+  };
+  const key = groupKey(claim);
+  const group = claims.filter((c) => groupKey(c) === key);
+  const state = states.get(id)!;
+  const rels = relationships
+    .filter((r) => [r.from_claim_id, r.to_claim_id].some((cid) => groupKey(claims.find((c) => c.id === cid)!) === key))
+    .map((r) => ({ ...r, decision: decided.get(r.id) ?? { status: "proposed" }, from: brief(r.from_claim_id), to: brief(r.to_claim_id) }));
+  const relIds = new Set(rels.map((r) => r.id));
+  return {
+    claim: { ...brief(id), subject: claim.subject, statement: claim.statement, scope: claim.scope, model: claim.model, promptVersion: claim.prompt_version, claimHash: claim.claim_hash },
+    state,
+    origin: brief(state.originId),
+    echoes: group.filter((c) => states.get(c.id)!.echoOf).map((c) => ({ ...brief(c.id), echoOf: states.get(c.id)!.echoOf })),
+    independent: group.filter((c) => !states.get(c.id)!.echoOf).map((c) => brief(c.id)),
+    relationships: rels,
+    history: allEntries().filter((e) => relIds.has(e.target_id) || (e.target_id === claim.document_id && e.action === "EXTRACT")),
+  };
+}
+
+export class ScopeError extends Error {}
+
+/** Adds a document to the assistant's scope. Recorded as SCOPE_ADD. */
+export function addToScope(id: string, actor: string, reason: string) {
+  const doc = getDocument(id);
+  if (!doc) throw new ScopeError(`No document ${id}.`);
+  if (inAiScope(doc)) throw new ScopeError(`${id} is already in the assistant's scope.`);
+  append({ actor, action: "SCOPE_ADD", targetType: "document", targetId: id, payload: { title: doc.title }, reason });
+  return summary(doc, scoreRow(id));
 }

@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "fa79c9490f3aa594794dfa028b81d450a2e00c77ac53bbf412e210eb4545f169",
+  "created_at": "2026-10-19T01:38:11.446Z",
+  "output": {
+    "type": "supersedes",
+    "confidence": 0.9,
+    "rationale": "Both are declared records from the same business unit and function, and v3 is a later version of the same guidelines that expands eligibility to renters for the contents tier. As a newer official version it legitimately replaces the owner-occupier-only rule in v1."
+  }
+}

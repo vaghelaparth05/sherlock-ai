@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "96c749de0ddedc8f23fd631d5d3cd4ba717854c2bd0444f96b068d8b3c719f0c",
+  "created_at": "2026-10-19T01:37:37.352Z",
+  "output": {
+    "type": "contradicts",
+    "confidence": 0.85,
+    "rationale": "The newer claim states a flat $5,000 for all eligible households, which conflicts with the declared tiered amounts in the guidelines. It comes from an AI-generated, unofficial summary on a team site, so it cannot legitimately replace or correct the declared record."
+  }
+}

@@ -41,10 +41,32 @@ CREATE TABLE IF NOT EXISTS claims (
   quote TEXT NOT NULL,
   location TEXT NOT NULL,
   claim_hash TEXT NOT NULL,
-  origin_claim_id TEXT,
-  is_echo INTEGER NOT NULL DEFAULT 0,
   model TEXT NOT NULL,
   prompt_version TEXT NOT NULL
+);
+
+-- Model proposals between value groups on one subject. Status comes from the ledger.
+CREATE TABLE IF NOT EXISTS relationships (
+  id TEXT PRIMARY KEY,
+  pair_key TEXT NOT NULL UNIQUE,      -- subject + both values, so each value pair is classified once
+  from_claim_id TEXT NOT NULL REFERENCES claims(id),   -- newer
+  to_claim_id TEXT NOT NULL REFERENCES claims(id),     -- older
+  type TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  rationale TEXT NOT NULL,
+  model TEXT NOT NULL,
+  prompt_version TEXT NOT NULL,
+  proposed_at TEXT NOT NULL
+);
+
+-- Answers the assistant gave staff, with the claims each one cited.
+CREATE TABLE IF NOT EXISTS ai_answers (
+  id TEXT PRIMARY KEY,
+  ts_utc TEXT NOT NULL,
+  staff_id TEXT NOT NULL,
+  question TEXT NOT NULL,
+  answer_json TEXT NOT NULL,
+  cited_claim_ids TEXT NOT NULL       -- JSON array
 );
 
 CREATE TABLE IF NOT EXISTS ledger (
@@ -80,6 +102,10 @@ CREATE TRIGGER IF NOT EXISTS documents_no_update BEFORE UPDATE ON documents
 BEGIN SELECT RAISE(ABORT, 'documents are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS documents_no_delete BEFORE DELETE ON documents
 BEGIN SELECT RAISE(ABORT, 'documents are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS ai_answers_no_update BEFORE UPDATE ON ai_answers
+BEGIN SELECT RAISE(ABORT, 'logged answers are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS ai_answers_no_delete BEFORE DELETE ON ai_answers
+BEGIN SELECT RAISE(ABORT, 'logged answers are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS ledger_no_update BEFORE UPDATE ON ledger
 BEGIN SELECT RAISE(ABORT, 'the ledger is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS ledger_no_delete BEFORE DELETE ON ledger
@@ -101,7 +127,8 @@ export function db(): DatabaseSync {
 
 /** Wipes the demo database and recreates the schema. Only scripts/seed.ts calls this. */
 export function resetDatabase(): void {
-  db().exec("DROP TABLE IF EXISTS scores; DROP TABLE IF EXISTS claims; DROP TABLE IF EXISTS ledger; DROP TABLE IF EXISTS documents;");
+  db().exec(`DROP TABLE IF EXISTS scores; DROP TABLE IF EXISTS ai_answers; DROP TABLE IF EXISTS relationships;
+     DROP TABLE IF EXISTS claims; DROP TABLE IF EXISTS ledger; DROP TABLE IF EXISTS documents;`);
   db().exec(SCHEMA);
 }
 

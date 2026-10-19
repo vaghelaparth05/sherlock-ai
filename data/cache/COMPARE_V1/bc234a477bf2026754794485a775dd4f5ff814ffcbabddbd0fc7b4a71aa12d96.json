@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "bc234a477bf2026754794485a775dd4f5ff814ffcbabddbd0fc7b4a71aa12d96",
+  "created_at": "2026-10-19T01:37:40.233Z",
+  "output": {
+    "type": "different_scope",
+    "confidence": 0.88,
+    "rationale": "The newer procedure applies only to applicants in listed remote communities and offers alternative proof of address for them, while the older guideline covers all applicants generally. Both can hold together, with the newer acting as a scoped exception rather than replacing the general rule."
+  }
+}

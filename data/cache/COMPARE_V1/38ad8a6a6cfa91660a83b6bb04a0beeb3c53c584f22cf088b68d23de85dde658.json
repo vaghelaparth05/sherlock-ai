@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "38ad8a6a6cfa91660a83b6bb04a0beeb3c53c584f22cf088b68d23de85dde658",
+  "created_at": "2026-10-19T01:37:38.381Z",
+  "output": {
+    "type": "different_scope",
+    "confidence": 0.88,
+    "rationale": "The older claim states how grants are paid out to applicants' own accounts, while the newer one says the department never asks applicants to pay or send funds to any account. These describe different things (payments to applicants versus payments requested from applicants) and can both be true."
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "03c7391231b1c3c64caf1b85dd79f8dd5079e1a7e8a73fdff563f354594be533",
+  "created_at": "2026-10-19T01:38:09.661Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $120,000 to be eligible.",
+        "value": "120000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $120,000."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "The grant is available to owner-occupiers, and renters are also eligible for the $2,000 contents tier.",
+        "value": "owner_occupiers;renters_contents_only",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is available to owner-occupiers, and renters are also eligible for the $2,000 contents tier."
+      },
+      {
+        "subject": "grant_amounts",
+        "statement": "The grant is paid in three tiers: $2,000 contents, $5,000 minor structural and $10,000 major structural.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is paid in three tiers: $2,000 for loss of contents, $5,000 for minor structural damage and $10,000 for major structural damage."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "Renters may apply for the contents tier only.",
+        "value": "owner_occupiers;renters_contents_only",
+        "scope": "renters",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Renters may apply for the contents tier only, as repairs to the building remain the responsibility of the owner."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Applications close on 31 December 2026.",
+        "value": "2026-12-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-12-31",
+        "quote": "Applications close on 31 December 2026."
+      },
+      {
+        "subject": "proof_of_address",
+        "statement": "Applicants must provide proof of address as a utility bill or a lease.",
+        "value": "lease;utility_bill",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants must provide proof of address in the form of a utility bill or a lease."
+      },
+      {
+        "subject": "application_fees",
+        "statement": "No fee is charged to apply or to have an application assessed.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "No fee is charged to apply for the grant or to have an application assessed."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "Approved grants are paid by EFT into the applicant's own bank account.",
+        "value": "eft_to_applicant_own_account",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Approved grants are paid by electronic funds transfer into the applicant's own bank account."
+      },
+      {
+        "subject": "other",
+        "statement": "The damaged property must be the principal place of residence and within the declared Riverbend disaster area.",
+        "value": "principal_residence_in_declared_riverbend_area",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The damaged property must be the household's principal place of residence and must be located within the declared Riverbend disaster area."
+      },
+      {
+        "subject": "other",
+        "statement": "Renters told before 3 August 2026 they could not apply may lodge an application under these guidelines.",
+        "value": "renters_previously_refused_may_apply",
+        "scope": "renters previously told they could not apply",
+        "effective_from": "2026-08-03",
+        "effective_to": "",
+        "quote": "Renters who were told before 3 August 2026 that they could not apply may lodge an application under these guidelines."
+      },
+      {
+        "subject": "other",
+        "statement": "Applicants may request an internal review within 28 days of a decision.",
+        "value": "internal_review_within_28_days",
+        "scope": "applicants who disagree with a decision",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants who disagree with a decision may request an internal review within 28 days."
+      }
+    ]
+  }
+}

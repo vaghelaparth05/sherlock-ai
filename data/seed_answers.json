@@ -1,0 +1,44 @@
+[
+  {
+    "id": "A1",
+    "ts_utc": "2026-07-03T00:12:00Z",
+    "staff_id": "CSO-014",
+    "question": "Are renters eligible?",
+    "sentences": [{ "text": "No. The grant is available to owner-occupiers only.", "cites": [{ "document": "D02", "subject": "eligible_tenure" }] }]
+  },
+  {
+    "id": "A2",
+    "ts_utc": "2026-07-08T03:40:00Z",
+    "staff_id": "CSO-022",
+    "question": "My caller rents; can they apply?",
+    "sentences": [{ "text": "No. Renters are not eligible; the grant is for owner-occupiers only.", "cites": [{ "document": "D11", "subject": "eligible_tenure" }] }]
+  },
+  {
+    "id": "A4",
+    "ts_utc": "2026-07-12T01:05:00Z",
+    "staff_id": "CSO-014",
+    "question": "When is the deadline?",
+    "sentences": [{ "text": "Applications close on 31 October 2026.", "cites": [{ "document": "D02", "subject": "application_deadline" }] }]
+  },
+  {
+    "id": "A5",
+    "ts_utc": "2026-07-18T05:22:00Z",
+    "staff_id": "CSO-009",
+    "question": "What is the income threshold?",
+    "sentences": [{ "text": "The household's combined annual income must be below $120,000.", "cites": [{ "document": "D02", "subject": "income_threshold" }] }]
+  },
+  {
+    "id": "A3",
+    "ts_utc": "2026-07-21T23:48:00Z",
+    "staff_id": "CSO-031",
+    "question": "Tenant whose flat flooded: eligible?",
+    "sentences": [{ "text": "No. Tenants are not eligible, because the grant is available to owner-occupiers only.", "cites": [{ "document": "D02", "subject": "eligible_tenure" }] }]
+  },
+  {
+    "id": "A6",
+    "ts_utc": "2026-07-26T02:30:00Z",
+    "staff_id": "CSO-022",
+    "question": "How much is the grant?",
+    "sentences": [{ "text": "The grant is $2,000 for contents, $5,000 for minor structural damage or $10,000 for major structural damage.", "cites": [{ "document": "D08", "subject": "grant_amounts" }] }]
+  }
+]

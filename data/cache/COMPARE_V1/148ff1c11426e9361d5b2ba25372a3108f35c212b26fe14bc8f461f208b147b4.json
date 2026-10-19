@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "148ff1c11426e9361d5b2ba25372a3108f35c212b26fe14bc8f461f208b147b4",
+  "created_at": "2026-10-19T01:38:12.090Z",
+  "output": {
+    "type": "supersedes",
+    "confidence": 0.9,
+    "rationale": "D21 is a later version (v3) of the same guidelines, from the same business unit and function, declared and held in the records system, with the same scope (all applicants). It legitimately replaces the earlier 31 October 2026 deadline with 31 December 2026."
+  }
+}

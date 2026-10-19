@@ -33,6 +33,8 @@ export interface ScoringConfig {
   likelihood: { min: number; level: number; label: string }[];
   risk_bands: { max: number; band: string }[];
   blocked_bands: string[];
+  echo_similarity: number;
+  bias: { group_by: "region" | "unit"; concentration_high: number };
 }
 
 function load<T>(file: string): T {

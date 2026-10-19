@@ -59,3 +59,12 @@ risk_bands:
   - { max: 25, band: Extreme }
 
 blocked_bands: [High, Extreme]
+
+# Claims with the same subject and value whose quotes are at least this similar (0-1)
+# are echoes of the earlier claim. Echoes never count as corroboration.
+echo_similarity: 0.85
+
+# Representation (bias) rating per subject.
+bias:
+  group_by: region          # region or unit
+  concentration_high: 0.75  # Herfindahl index of in-scope claims

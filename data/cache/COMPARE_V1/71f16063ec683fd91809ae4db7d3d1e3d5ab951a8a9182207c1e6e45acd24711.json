@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "71f16063ec683fd91809ae4db7d3d1e3d5ab951a8a9182207c1e6e45acd24711",
+  "created_at": "2026-10-19T01:37:37.947Z",
+  "output": {
+    "type": "supersedes",
+    "confidence": 0.88,
+    "rationale": "D02 is a declared v2 of the same guidelines from the same unit and function, covering the same applicants and dated later, so it legitimately replaces the $90,000 threshold in v1 with $120,000. Neither document presents itself as an error fix, so this is a version update."
+  }
+}

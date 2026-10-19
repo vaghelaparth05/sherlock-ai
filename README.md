@@ -35,7 +35,23 @@ SHERLOCK_OFFLINE=1 npm run seed     # replay model results from data/cache only,
 
 Open http://localhost:3000. Uploaded files are written to `data/uploads/` (git-ignored).
 
-Backend API: `GET /api/register` (every document with trust, risk and gate), `GET /api/register/:id` (score breakdown, claims, ledger), `POST /api/register/:id/override` (`{actor, reason}`).
+For the live demo, upload `data/incoming/D14.md` then `data/incoming/D21.md` (or `npm run arrive <file>`). Their model results are in `data/cache`, so the demo also works with `SHERLOCK_OFFLINE=1`. Run `npm run seed` again to reset.
+
+### Backend API
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| GET | `/api/register` | Every document with trust, likelihood, consequence, risk, gate and AI scope |
+| GET | `/api/register/:id` | Score breakdown, claims with status, gate decision, ledger entries |
+| POST | `/api/register/:id/override` | `{actor, reason}`: allow a blocked document (ledger `GATE_OVERRIDE`) |
+| POST | `/api/register/ingest` | Multipart `file` (a `.md` record): ingest, extract, propose relationships, score; returns its impact |
+| GET | `/api/claims/:id` | Origin, echoes, independent sources, relationships, status history |
+| GET | `/api/review` | Proposed relationships with both quotes and what confirming them would affect |
+| POST | `/api/review/:id` | `{decision: confirm \| dismiss \| change, type?, actor, reason?}`; confirming issues recall notices |
+| GET | `/api/bias` | Representation rating per subject, with the gap message |
+| POST | `/api/scope` | `{documentId, actor, reason}`: add a document to AI scope (ledger `SCOPE_ADD`) |
+| GET | `/api/recalls` | Recall notices for AI answers that relied on superseded or contradicted claims |
+| GET | `/api/ledger` | Entries (`?action=`, `?target=`) and the result of verifying the hash chain |
 
 ## Stack
 
@@ -52,5 +68,7 @@ Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. The backend is 
 - [ ] Step 4: Load new documents, then Summary and charts
 - [ ] Step 5: User review queue and audit log
 - [x] Backend P0: demo corpus, taxonomy, scoring config, ingest with SHA-256, Claude claim extraction with cache and verbatim-quote check, hash-chained ledger, trust/risk scoring, gate, register API
-- [ ] Backend P1: echo detection, conflict classification, review queue, upload flow, impact and recall, bias view
+- [x] Backend P1: echo detection, conflict classification (COMPARE_V1), review queue, upload flow, impact and recall notices, bias rating with "Add to AI scope", ledger API
+- [ ] Backend P2: assistant (ANSWER_V1) with per-sentence trust labels
+- [ ] Screens for register, document, claim, review, impact, bias, ledger
 - [ ] Real database connector

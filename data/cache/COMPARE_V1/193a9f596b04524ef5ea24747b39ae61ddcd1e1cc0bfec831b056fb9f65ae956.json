@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "193a9f596b04524ef5ea24747b39ae61ddcd1e1cc0bfec831b056fb9f65ae956",
+  "created_at": "2026-10-19T01:38:00.607Z",
+  "output": {
+    "type": "contradicts",
+    "confidence": 0.85,
+    "rationale": "Both claims cover all flood recovery grant applicants, and one says no fee while the other requires a $50 fee. The newer notice has an unknown business unit and record status and sits in external custody, so it cannot legitimately replace the declared guidelines."
+  }
+}
