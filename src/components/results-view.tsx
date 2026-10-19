@@ -7,16 +7,14 @@ import { ArrowRight, CircleCheck, FilePlus2, SearchX } from "lucide-react";
 import clsx from "clsx";
 import { TopNav } from "@/components/top-nav";
 import { Reveal } from "@/components/reveal";
-import { Panel } from "@/components/panel";
 import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
 import { FilterBar } from "@/components/results/filter-bar";
 import { FindingCard } from "@/components/results/finding-card";
 import { FindingDrawer } from "@/components/results/finding-drawer";
-import { SeverityMap } from "@/components/results/severity-map";
 import { SourceList } from "@/components/results/source-list";
 import { TYPE_META } from "@/lib/mock-dashboard";
-import { CLAIMS, COLLECTION, DOCS, FINDINGS, type FindingStatus, type FindingType, type Severity } from "@/lib/results-data";
+import { COLLECTION, DOCS, FINDINGS, type FindingStatus, type FindingType } from "@/lib/results-data";
 import { TYPES, applyFilters, sourceStats, summarise, type Filters } from "@/lib/results-derive";
 
 const DEFAULT_FILTERS: Filters = { type: "all", severity: "all", status: "open", query: "", sort: "severity" };
@@ -33,17 +31,11 @@ export function ResultsView() {
   const selected = findings.find((f) => f.id === selectedId) ?? null;
 
   const sourceCount = new Set(DOCS.map((d) => d.source)).size;
-  const attention = stats.filter((s) => s.verdict === "attention").length;
 
   const decide = useCallback((id: string, status: FindingStatus) => {
     setFindings((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
     if (status !== "open") setSelectedId(null);
   }, []);
-
-  const pickCell = (type: FindingType, severity: Severity) => {
-    setView("findings");
-    setFilters((f) => ({ ...f, type, severity, status: "open" }));
-  };
 
   const tab = view === "sources" ? "sources" : filters.type;
   const tabs: { id: "all" | FindingType | "sources"; label: string; count: number }[] = [
@@ -67,19 +59,6 @@ export function ResultsView() {
               {COLLECTION.scannedAt}
             </p>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{COLLECTION.name}</h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-muted">
-              Sherlock read <b className="font-medium text-fg">{DOCS.length} documents</b>, found{" "}
-              <b className="font-medium text-fg">{CLAIMS.length} claims</b> across{" "}
-              <b className="font-medium text-fg">{sourceCount} sources</b> and raised{" "}
-              <b className="font-medium text-fg">{summary.total} findings</b>.{" "}
-              {summary.open > 0 ? (
-                <>
-                  <b className="font-medium text-fg">{summary.open}</b> still need your review.
-                </>
-              ) : (
-                "Everything has been reviewed."
-              )}
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -154,7 +133,7 @@ export function ResultsView() {
           })}
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="mt-8">
           <section className="min-w-0">
             <div role="tablist" className="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-line">
               {tabs.map((t) => (
@@ -239,23 +218,6 @@ export function ResultsView() {
             </AnimatePresence>
           </section>
 
-          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <Panel title="Open by severity" description="Click a cell to filter the list" delay={0.2}>
-              <SeverityMap matrix={summary.matrix} active={filters} onPick={pickCell} />
-            </Panel>
-            <Panel title="Sources at a glance" delay={0.28}>
-              <p className="text-[13px] text-muted">
-                <b className="text-2xl font-semibold tracking-tight text-fg tabular-nums">{attention}</b> of {sourceCount} sources need attention.
-              </p>
-              <button
-                type="button"
-                onClick={() => setView("sources")}
-                className="mt-3 text-[12.5px] text-muted underline-offset-4 transition hover:text-fg hover:underline"
-              >
-                See all sources
-              </button>
-            </Panel>
-          </div>
         </div>
 
         <p className="pt-10 text-center text-[12px] text-faint">Showing sample data. Real findings appear once scanning is connected.</p>
