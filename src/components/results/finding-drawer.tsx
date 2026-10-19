@@ -74,10 +74,13 @@ export function FindingDrawer({
     };
   }, [finding, onClose]);
 
-  useEffect(() => {
+  // A different finding starts with an empty note (state adjusted during render, not in an effect).
+  const [noteFor, setNoteFor] = useState(finding?.id);
+  if (noteFor !== finding?.id) {
+    setNoteFor(finding?.id);
     setReviewNote("");
     setNoteError(false);
-  }, [finding?.id]);
+  }
 
   function decide(status: Extract<FindingStatus, "confirmed" | "dismissed">) {
     const note = reviewNote.trim();

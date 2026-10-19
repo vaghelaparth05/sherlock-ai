@@ -61,7 +61,7 @@ export function TrendChart() {
             </g>
           ))}
           {TREND.labels.map((l, i) => (
-            <text key={l} x={x(i)} y={H - 6} textAnchor={i === n - 1 ? "end" : "middle"} fontSize="10.5" fill={hover === i ? "var(--fg)" : "var(--fg-faint)"}>
+            <text key={i} x={x(i)} y={H - 6} textAnchor={i === n - 1 ? "end" : "middle"} fontSize="10.5" fill={hover === i ? "var(--fg)" : "var(--fg-faint)"}>
               {l}
             </text>
           ))}

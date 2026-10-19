@@ -304,12 +304,19 @@ function activityText(e: LedgerEntry): string {
 const RAISED = new Set(["PROPOSE_RELATIONSHIP", "TAMPER_DETECTED"]);
 const RESOLVED = new Set(["CONFIRM", "DISMISS", "CHANGE_RELATIONSHIP", "REJECT"]);
 
-/** Findings raised versus decisions made per day (Australia/Sydney) over the last 8 days, from the ledger. */
+/**
+ * Findings raised versus decisions made, cumulative, at 8 points across the collection's life in the
+ * ledger (first entry to now). Labels are times of day for a young collection, dates once it is older.
+ */
 function trend(entries: LedgerEntry[]) {
-  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
-  const days = Array.from({ length: 8 }, (_, i) => day(new Date(Date.now() - (7 - i) * 86_400_000)));
-  const count = (set: Set<string>) => days.map((d) => entries.filter((e) => set.has(e.action) && day(new Date(e.ts_utc)) === d).length);
-  return { labels: days.map((_, i) => (i === 7 ? "Today" : `-${7 - i}d`)), found: count(RAISED), resolved: count(RESOLVED) };
+  const end = Date.now();
+  const start = entries.length ? Date.parse(entries[0].ts_utc) : end;
+  const points = Array.from({ length: 8 }, (_, i) => start + ((end - start) * i) / 7);
+  const sameDay = end - start < 86_400_000;
+  const label = (t: number) =>
+    new Date(t).toLocaleString("en-AU", sameDay ? { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" } : { timeZone: "Australia/Sydney", day: "numeric", month: "short" });
+  const upTo = (set: Set<string>) => points.map((t) => entries.filter((e) => set.has(e.action) && Date.parse(e.ts_utc) <= t).length);
+  return { labels: points.map((t, i) => (i === 7 ? "Now" : label(t))), found: upTo(RAISED), resolved: upTo(RESOLVED) };
 }
 
 /** Dashboard numbers in the shapes of mock-dashboard.ts, from the live register and ledger. */

@@ -173,7 +173,7 @@ export function InvestigationDashboard({ collection, documentNames }: { collecti
         <nav className="side-nav" aria-label="Workspace">
           {[
             { label: "Overview", icon: Layers3 },
-            { label: "Collections", icon: Archive, count: "08" },
+            { label: "Collections", icon: Archive, count: rows.length ? "01" : "00" },
             { label: "Claims", icon: MessageSquareText, count: String(open.length).padStart(2, "0") },
             { label: "Sources", icon: Globe2 },
             { label: "Activity", icon: Activity },
@@ -246,11 +246,11 @@ export function InvestigationDashboard({ collection, documentNames }: { collecti
           <section className="analysis-banner">
             <div className="analysis-icon"><Sparkles size={17} /></div>
             <div className="analysis-banner-copy">
-              <strong>Investigation preview · sources, evidence and risk signals</strong>
-              <span>Example research paths: trace origins, corroborate claims, and flag potential misinformation or bias.</span>
+              <strong>Analysis complete · {results.claims.length} claims traced across {documentNames.length} records</strong>
+              <span>Origins traced and copies counted once, conflicts classified and checked against declared records. {open.length} finding{open.length === 1 ? "" : "s"} need{open.length === 1 ? "s" : ""} your decision.</span>
             </div>
-            <div className="branch-pills"><span><Archive size={13} /> Archive</span><span><Globe2 size={13} /> Web</span><span><Network size={13} /> Bias scan</span></div>
-            <button type="button" className="banner-link" onClick={() => claims[0] && setSelectedClaim(claims[0])}>View run <ArrowRight size={15} /></button>
+            <div className="branch-pills"><span><Archive size={13} /> {documentNames.length} records</span><span><Fingerprint size={13} /> {rows.length} fingerprinted</span><span><Network size={13} /> {claims.filter((c) => c.finding.type === "bias").length} bias signals</span></div>
+            <Link href="/results" className="banner-link">See findings <ArrowRight size={15} /></Link>
           </section>
 
           <div className="dashboard-columns">

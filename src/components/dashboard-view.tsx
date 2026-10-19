@@ -49,7 +49,7 @@ export function DashboardView() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
-          <Panel title="Findings over time" description="Found versus resolved, per week" delay={0.15}>
+          <Panel title="Findings over time" description="Raised versus resolved since the collection was loaded" delay={0.15}>
             <TrendChart />
           </Panel>
           <Panel title="Open by type" description="Across all investigations" action={{ label: "Review", href: "/review" }} delay={0.2}>

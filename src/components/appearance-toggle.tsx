@@ -1,39 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 
 type Appearance = "light" | "dark";
 const STORAGE_KEY = "sherlock-appearance";
 
-export function AppearanceToggle() {
-  const [appearance, setAppearance] = useState<Appearance>("light");
+// The document's data-theme attribute is the source of truth. The inline script in the root
+// layout sets it from storage before first paint, so this control only reads and flips it.
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+const current = (): Appearance => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+const onServer = (): Appearance => "light";
 
-  useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = window.localStorage.getItem(STORAGE_KEY);
-    } catch {
-      // Keep the default light appearance when browser storage is unavailable.
-    }
-    const initial: Appearance = saved === "dark" || saved === "light"
-      ? saved
-      : document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    document.documentElement.dataset.theme = initial;
-    setAppearance(initial);
-  }, []);
+export function AppearanceToggle() {
+  const appearance = useSyncExternalStore(subscribe, current, onServer);
 
   function toggleAppearance() {
-    // Use the document as the source of truth so multiple toggles or route
-    // transitions cannot leave this control with stale React state.
-    const next: Appearance = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    const next: Appearance = current() === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // The current page still switches appearance if browser storage is unavailable.
     }
-    setAppearance(next);
   }
 
   const nextAppearance = appearance === "dark" ? "light" : "dark";
