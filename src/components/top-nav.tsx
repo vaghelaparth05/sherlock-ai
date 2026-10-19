@@ -1,83 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
-import { LayoutDashboard, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import clsx from "clsx";
 import { AppearanceToggle } from "@/components/appearance-toggle";
 
-const STEPS = ["Import", "Scan", "Results", "Review", "Summary"] as const;
+const STEPS = [
+  { label: "Import", href: "/import" },
+  { label: "Scan", href: "/scan" },
+  { label: "Results", href: "/results" },
+  { label: "Review", href: "/review" },
+  { label: "Summary" },
+] as const;
 
 export function TopNav({ active = -1, current }: { active?: number; current?: "dashboard" }) {
-  const onDashboard = current === "dashboard";
-
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-        <motion.div
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-          <Link href="/dashboard" className="flex items-center gap-2.5" aria-label="Sherlock.ai home">
-            <span className="grid size-7 place-items-center rounded-md border border-line-strong bg-elevated">
-              <Search className="size-3.5 text-fg" strokeWidth={2.25} />
-            </span>
-            <span className="text-sm font-semibold tracking-tight">Sherlock.ai</span>
-            <span className="ml-1 hidden rounded-full border border-line px-2 py-0.5 text-[11px] text-muted sm:inline">
-              Investigator
-            </span>
-          </Link>
-        </motion.div>
-
-        <nav aria-label="Main" className="flex items-center gap-1">
-          <Link
-            href="/dashboard"
-            aria-current={onDashboard ? "page" : undefined}
-            className={clsx(
-              "relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] transition-colors hover:text-fg sm:px-3",
-              onDashboard ? "text-fg" : "text-faint",
-            )}
-          >
-            <LayoutDashboard className="size-3.5 sm:hidden" />
-            <span className="hidden sm:inline">Dashboard</span>
-            {onDashboard && (
-              <motion.span
-                layoutId="nav-underline"
-                className="absolute inset-x-2 -bottom-[15px] h-px bg-fg"
-                transition={{ type: "spring", stiffness: 500, damping: 40 }}
-              />
-            )}
-          </Link>
-
-          <span aria-hidden className="mx-1.5 hidden h-4 w-px bg-line sm:block" />
-
-          {STEPS.map((label, i) => {
-            const isActive = i === active;
-            return (
-              <div
-                key={label}
-                aria-current={isActive ? "step" : undefined}
-                className={clsx(
-                  "relative px-2.5 py-1.5 text-[13px] transition-colors sm:px-3",
-                  isActive ? "text-fg" : "text-faint",
-                )}
-              >
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden">{i + 1}</span>
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute inset-x-2 -bottom-[15px] h-px bg-fg"
-                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                  />
-                )}
-              </div>
+    <header className="sticky top-0 z-30 border-b border-line bg-bg/95 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-5 px-5 lg:flex-nowrap">
+        <Link href="/dashboard" className="flex h-14 items-center gap-2.5" aria-label="Sherlock.ai home">
+          <span className="grid size-7 place-items-center rounded-md border border-line-strong bg-elevated">
+            <Search className="size-3.5" strokeWidth={2.25} />
+          </span>
+          <span className="text-sm font-semibold tracking-tight">Sherlock.ai</span>
+        </Link>
+        <nav aria-label="Main" className="order-last flex w-full items-center overflow-x-auto lg:order-none lg:w-auto">
+          {[{ label: "Dashboard", href: "/dashboard" }, ...STEPS].map((step, index) => {
+            const selected = index === 0 ? current === "dashboard" : active === index - 1;
+            const className = clsx("shrink-0 border-b-2 px-3 py-3 text-[13px] transition-colors", selected ? "border-fg font-medium text-fg" : "border-transparent text-muted hover:text-fg");
+            return "href" in step ? (
+              <Link key={step.label} href={step.href} aria-current={selected ? "page" : undefined} className={className}>{step.label}</Link>
+            ) : (
+              <span key={step.label} aria-disabled="true" title="Summary is coming soon" className="shrink-0 border-b-2 border-transparent px-3 py-3 text-[13px] text-muted">{step.label}</span>
             );
           })}
-          <span aria-hidden className="mx-1.5 hidden h-4 w-px bg-line sm:block" />
-          <AppearanceToggle />
         </nav>
+        <AppearanceToggle />
       </div>
     </header>
   );
