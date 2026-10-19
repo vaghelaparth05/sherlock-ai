@@ -99,7 +99,7 @@ export function ResultsView({ reviewMode = false }: { reviewMode?: boolean }) {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[360px]" aria-hidden />
-      <TopNav active={reviewMode ? 3 : 2} />
+      <TopNav active={reviewMode ? 2 : 1} />
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-10">
         <Reveal className="flex flex-wrap items-end justify-between gap-4">

@@ -8,7 +8,6 @@ import { useLive } from "@/components/live-provider";
 
 const STEPS = [
   { label: "Import", href: "/import" },
-  { label: "Scan", href: "/scan" },
   { label: "Results", href: "/results" },
   { label: "Review", href: "/review" },
   { label: "Register", href: "/register" },

@@ -39,7 +39,7 @@ export function SourceDetailView({ detail }: { detail: SourceDetail }) {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[340px]" aria-hidden />
-      <TopNav active={2} />
+      <TopNav active={1} />
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-8">
         <Link href="/sources" className="inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-fg">

@@ -47,7 +47,7 @@ export function RegisterView() {
 
   return (
     <div className="relative min-h-screen">
-      <TopNav active={4} />
+      <TopNav active={3} />
       <main className="mx-auto max-w-6xl px-5 pb-24 pt-10">
         <Reveal className="flex flex-wrap items-end justify-between gap-4">
           <div>

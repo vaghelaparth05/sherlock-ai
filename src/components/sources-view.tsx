@@ -49,7 +49,7 @@ export function SourcesView() {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[340px]" aria-hidden />
-      <TopNav active={2} />
+      <TopNav active={1} />
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-10">
         <Reveal>

@@ -8,7 +8,7 @@ import { useDashboard } from "@/components/live-provider";
 
 const STATUS: Record<InvestigationStatus, { label: string; color: string; href: string; cta: string }> = {
   "needs-review": { label: "Needs review", color: "var(--warning)", href: "/review", cta: "Resume" },
-  scanning: { label: "Scanning", color: "var(--accent)", href: "/scan", cta: "View" },
+  scanning: { label: "Scanning", color: "var(--accent)", href: "/results", cta: "View" },
   resolved: { label: "Resolved", color: "var(--success)", href: "/results", cta: "Open" },
 };
 
