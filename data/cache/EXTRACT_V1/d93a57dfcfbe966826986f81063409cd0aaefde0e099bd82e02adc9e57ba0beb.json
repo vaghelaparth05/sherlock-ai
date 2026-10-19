@@ -1,0 +1,55 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "d93a57dfcfbe966826986f81063409cd0aaefde0e099bd82e02adc9e57ba0beb",
+  "created_at": "2026-10-19T01:28:04.813Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $120,000 to be eligible.",
+        "value": "120000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $120,000."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "The grant is available to owner-occupiers only.",
+        "value": "owner_occupiers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is available to owner-occupiers only."
+      },
+      {
+        "subject": "proof_of_address",
+        "statement": "Applicants must provide proof of address in the form of a utility bill or a lease.",
+        "value": "lease;utility_bill",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants must provide proof of address in the form of a utility bill or a lease."
+      },
+      {
+        "subject": "other",
+        "statement": "The damaged property must be inside the declared disaster area.",
+        "value": "property_must_be_in_declared_disaster_area",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Confirm the address of the damaged property early in the call, because it must be inside the declared disaster area."
+      },
+      {
+        "subject": "other",
+        "statement": "The grant amount depends on the damage assessment.",
+        "value": "grant_amount_depends_on_damage_assessment",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Do not promise a particular grant amount, because the amount depends on the damage assessment."
+      }
+    ]
+  }
+}

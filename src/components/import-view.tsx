@@ -218,7 +218,7 @@ export function ImportView() {
         progress: 1,
       })),
     ]);
-    if (!collection) setCollection("Staff leave policy");
+    if (!collection) setCollection("Riverbend Flood Recovery Grant");
     setTab("upload");
   };
 
@@ -297,11 +297,11 @@ export function ImportView() {
                     <span className="mb-3 grid size-9 place-items-center rounded-md border border-line-strong bg-elevated">
                       <Sparkles className="size-4" />
                     </span>
-                    <p className="text-[15px] font-medium">Staff leave policy</p>
+                    <p className="text-[15px] font-medium">Riverbend Flood Recovery Grant</p>
                     <p className="mt-1 max-w-md text-[13px] text-muted">
-                      Twelve short documents about annual leave: a policy, a handbook, an FAQ, a budget paper and more.
-                      Several repeat the same figure. A new policy update is waiting for the next step. Good for a
-                      first walkthrough.
+                      Nineteen fictional records from a flood recovery grant: guidelines, call-centre scripts, an
+                      AI-written FAQ, payment procedures and two regional procedures the assistant cannot yet read.
+                      Several repeat an out-of-date figure. Good for a first walkthrough.
                     </p>
                     <button
                       type="button"

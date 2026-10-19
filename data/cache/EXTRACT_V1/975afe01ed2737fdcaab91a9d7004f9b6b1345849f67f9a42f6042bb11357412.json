@@ -1,0 +1,73 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "975afe01ed2737fdcaab91a9d7004f9b6b1345849f67f9a42f6042bb11357412",
+  "created_at": "2026-10-19T01:28:05.231Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "grant_amounts",
+        "statement": "The approved grant amount is one of three tiers: contents $2,000, minor structural $5,000, or major structural $10,000.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "all approved applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The approved amount is one of the three grant tiers: contents ($2,000), minor structural ($5,000) or major structural ($10,000)."
+      },
+      {
+        "subject": "application_fees",
+        "statement": "Applicants are never charged a fee at any stage of the application, assessment or payment process.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants are never charged a fee at any stage of the application, assessment or payment process."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "Grants are paid only by electronic funds transfer into a bank account held in the applicant's own name.",
+        "value": "eft_to_applicant_own_account",
+        "scope": "all approved applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Grants are paid only by electronic funds transfer into a bank account held in the applicant's own name."
+      },
+      {
+        "subject": "other",
+        "statement": "Payments to third parties, agents or accounts in another person's name are not permitted.",
+        "value": "no_third_party_payments",
+        "scope": "Finance officers",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Payments to third parties, agents or accounts in another person's name are not permitted."
+      },
+      {
+        "subject": "other",
+        "statement": "Finance officers must not pay any amount other than a tier amount; mismatched assessments are returned to the assessment officer.",
+        "value": "only_tier_amounts_payable",
+        "scope": "Finance officers",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Finance officers must not pay any other amount."
+      },
+      {
+        "subject": "other",
+        "statement": "The department will never ask an applicant to transfer money to any account; such requests are suspected fraud.",
+        "value": "department_never_requests_applicant_transfers",
+        "scope": "all applicants and staff",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The department will never ask an applicant to transfer money to any account, and staff must treat any such request as suspected fraud."
+      },
+      {
+        "subject": "other",
+        "statement": "Suspected fraud must be reported to Internal Audit on the same day it is identified, and no further payment released on the affected application until Internal Audit responds.",
+        "value": "report_fraud_same_day_hold_payments",
+        "scope": "staff",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Report suspected fraud to Internal Audit on the same day it is identified, and do not release any further payment on the affected application until Internal Audit has responded."
+      }
+    ]
+  }
+}

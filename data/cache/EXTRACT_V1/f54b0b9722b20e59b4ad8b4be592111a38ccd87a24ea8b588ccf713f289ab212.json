@@ -1,0 +1,46 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "f54b0b9722b20e59b4ad8b4be592111a38ccd87a24ea8b588ccf713f289ab212",
+  "created_at": "2026-10-19T01:29:43.553Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $90,000 to be eligible.",
+        "value": "90000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $90,000."
+      },
+      {
+        "subject": "grant_amounts",
+        "statement": "Every eligible household receives a flat $5,000.",
+        "value": "flat:5000",
+        "scope": "all eligible households",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Every eligible household receives $5,000."
+      },
+      {
+        "subject": "other",
+        "statement": "The property must be the household's main residence and be in the flood-affected area.",
+        "value": "main_residence_in_flood_affected_area_required",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The property must be the household's main residence and must be in the flood-affected area."
+      },
+      {
+        "subject": "other",
+        "statement": "Payment is made once the application has been approved.",
+        "value": "payment_after_approval",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The payment is made once the application has been approved."
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "e1fe52977b4e1d7d650ca7ab6a76e7a4cc8e77a357f55dde5502c8cb34e8f920",
+  "created_at": "2026-10-19T01:29:42.824Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "proof_of_address",
+        "statement": "Applicants in remote communities may provide a statutory declaration or a letter from a community organisation as proof of address instead of a utility bill or lease.",
+        "value": "community_organisation_letter;statutory_declaration",
+        "scope": "applicants living in the remote communities listed in the attachment",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants in remote communities may provide a statutory declaration or a letter from a community organisation as proof of address instead of a utility bill or lease."
+      }
+    ]
+  }
+}

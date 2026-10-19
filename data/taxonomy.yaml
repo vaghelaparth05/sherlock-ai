@@ -1,0 +1,80 @@
+# Classification scheme for the Riverbend Flood Recovery Grant collection.
+# Owned by the information management team. Fictional.
+
+regions:
+  head_office: { name: Head Office }
+  riverbend: { name: Riverbend Regional Office }
+
+units:
+  Grants Policy: { region: head_office, serves: all applicants }
+  Customer Service: { region: head_office, serves: callers to the grant hotline }
+  Communications: { region: head_office, serves: staff and the public }
+  Learning and Development: { region: head_office, serves: call-centre staff }
+  Ministerial Liaison: { region: head_office, serves: the Minister's office }
+  Finance: { region: head_office, serves: grant recipients }
+  Internal Audit: { region: head_office, serves: the audit committee }
+  Executive: { region: head_office, serves: the department }
+  Grants Steering Committee: { region: head_office, serves: the department }
+  Corporate Services: { region: head_office, serves: staff }
+  Regional Operations: { region: riverbend, serves: remote communities }
+  Community Liaison: { region: riverbend, serves: remote communities }
+
+# Business functions. Consequence (1-5) follows high-value, high-risk records guidance.
+functions:
+  grant_eligibility:
+    owner: Grants Policy
+    related: [Customer Service, Communications, Learning and Development, Ministerial Liaison, Executive,
+              Grants Steering Committee, Regional Operations, Community Liaison]
+    consequence: 4
+  grant_payments:
+    owner: Finance
+    related: [Internal Audit, Grants Policy, Customer Service]
+    consequence: 4
+  public_communications:
+    owner: Communications
+    related: [Ministerial Liaison, Executive]
+    consequence: 3
+  governance:
+    owner: Executive
+    related: [Grants Steering Committee, Internal Audit]
+    consequence: 3
+  staff_training:
+    owner: Learning and Development
+    related: [Customer Service]
+    consequence: 2
+  internal_admin:
+    owner: Corporate Services
+    related: []
+    consequence: 1
+
+# Controlled vocabulary for claims. `value` says how the normalised value must be written,
+# so claims from different documents compare as plain strings.
+subjects:
+  income_threshold:
+    label: Household income threshold
+    value: whole Australian dollars, digits only, e.g. "120000"
+  grant_amounts:
+    label: Grant amounts and tiers
+    value: >-
+      tier:amount pairs in ascending amount, joined by ";", e.g.
+      "contents:2000;minor_structural:5000;major_structural:10000". A single flat amount is "flat:5000".
+  eligible_tenure:
+    label: Who is eligible by housing tenure
+    value: >-
+      eligible groups joined by ";", e.g. "owner_occupiers" or "owner_occupiers;renters_contents_only"
+  application_deadline:
+    label: Application deadline
+    value: ISO date, e.g. "2026-10-31"
+  proof_of_address:
+    label: Accepted proof of address
+    value: >-
+      accepted documents in alphabetical order, snake_case, joined by ";", e.g. "lease;utility_bill"
+      or "community_organisation_letter;statutory_declaration"
+  application_fees:
+    label: Fees charged to applicants
+    value: '"none", or the fee in whole Australian dollars, digits only, e.g. "50"'
+  payment_account:
+    label: Bank accounts that grant money moves through
+    value: >-
+      snake_case description, e.g. "eft_to_applicant_own_account"; for a transfer the applicant is asked
+      to make, "applicant_pays_bsb_<bsb>_account_<number>"

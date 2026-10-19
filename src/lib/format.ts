@@ -54,17 +54,25 @@ export function groupOf(ext: string): string {
 
 export const ACCEPT_ATTR = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx,.xls,.json,.html,.htm,.rtf,.eml";
 
+/** Mirrors data/corpus, which `npm run seed` loads into the register. */
 export const SAMPLE_COLLECTION: Omit<ImportItem, "id" | "status" | "progress" | "origin">[] = [
-  { name: "Leave Policy v2.pdf", size: 184_320, ext: "pdf" },
-  { name: "Staff Handbook 2022.docx", size: 412_160, ext: "docx" },
-  { name: "Intranet leave FAQ.html", size: 28_672, ext: "html" },
-  { name: "Onboarding pack.pdf", size: 1_240_000, ext: "pdf" },
-  { name: "Manager guide.docx", size: 98_304, ext: "docx" },
-  { name: "Annual report 2023.pdf", size: 3_800_000, ext: "pdf" },
-  { name: "Casual staff guide.pdf", size: 76_800, ext: "pdf" },
-  { name: "Payroll manual.docx", size: 530_000, ext: "docx" },
-  { name: "Budget paper 2024.xlsx", size: 220_160, ext: "xlsx" },
-  { name: "Training slides.pdf", size: 2_100_000, ext: "pdf" },
-  { name: "Internal audit report.pdf", size: 960_000, ext: "pdf" },
-  { name: "Regional office memo.txt", size: 4_096, ext: "txt" },
+  { name: "D01 Riverbend Flood Recovery Grant Guidelines v1.md", size: 1800, ext: "md" },
+  { name: "D02 Riverbend Flood Recovery Grant Guidelines v2.md", size: 1780, ext: "md" },
+  { name: "D03 Call centre script (March).md", size: 1537, ext: "md" },
+  { name: "D04 Staff intranet FAQ.md", size: 1585, ext: "md" },
+  { name: "D05 Training slides: grant basics.md", size: 1562, ext: "md" },
+  { name: "D06 Minister's media release.md", size: 1511, ext: "md" },
+  { name: "D07 Eligibility quick reference card.md", size: 1315, ext: "md" },
+  { name: "D08 Payments procedure.md", size: 1832, ext: "md" },
+  { name: "D09 AI-generated staff FAQ summary.md", size: 1568, ext: "md" },
+  { name: "D10 Proof of address procedure.md", size: 1537, ext: "md" },
+  { name: "D11 Call centre script v2.md", size: 1623, ext: "md" },
+  { name: "D12 Remote community applications procedure.md", size: 1809, ext: "md" },
+  { name: "D13 Email: remote applicants turned away.md", size: 1511, ext: "md" },
+  { name: "D15 Internal audit memo: grant controls.md", size: 1879, ext: "md" },
+  { name: "D16 Executive board briefing.md", size: 1580, ext: "md" },
+  { name: "D17 Community newsletter article.md", size: 1468, ext: "md" },
+  { name: "D18 Grants steering committee minutes.md", size: 1726, ext: "md" },
+  { name: "D19 Staff newsletter.md", size: 1462, ext: "md" },
+  { name: "D20 Field visit report.md", size: 1656, ext: "md" },
 ].map((d) => ({ ...d, detail: "Sample set" }));

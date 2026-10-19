@@ -40,6 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Sherlock local data
-/data/
-!/data/.gitkeep
+# Sherlock local data. The corpus, taxonomy and model cache are committed.
+/data/uploads/
+/data/sherlock.db*

@@ -1,0 +1,19 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "207970270759cc50d66766de2fb6d19dd2a224189883d9f912ac0adf3748be89",
+  "created_at": "2026-10-19T01:29:38.979Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $90,000 to be eligible for the Riverbend Flood Recovery Grant.",
+        "value": "90000",
+        "scope": "all applicant households",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $90,000."
+      }
+    ]
+  }
+}

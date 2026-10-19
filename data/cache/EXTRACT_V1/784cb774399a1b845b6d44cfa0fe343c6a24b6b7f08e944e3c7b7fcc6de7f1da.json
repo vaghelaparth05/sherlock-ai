@@ -1,0 +1,73 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "784cb774399a1b845b6d44cfa0fe343c6a24b6b7f08e944e3c7b7fcc6de7f1da",
+  "created_at": "2026-10-19T01:27:32.103Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $90,000 to be eligible.",
+        "value": "90000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $90,000."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "The grant is available to owner-occupiers only.",
+        "value": "owner_occupiers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is available to owner-occupiers only."
+      },
+      {
+        "subject": "grant_amounts",
+        "statement": "The grant is paid in three tiers: $2,000 for contents, $5,000 for minor structural damage and $10,000 for major structural damage.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is paid in three tiers: $2,000 for loss of contents, $5,000 for minor structural damage and $10,000 for major structural damage."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Applications close on 31 October 2026.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Applications close on 31 October 2026."
+      },
+      {
+        "subject": "proof_of_address",
+        "statement": "Applicants must provide proof of address as a utility bill or a lease.",
+        "value": "lease;utility_bill",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants must provide proof of address in the form of a utility bill or a lease."
+      },
+      {
+        "subject": "other",
+        "statement": "The damaged property must be the household's principal place of residence and within the declared Riverbend disaster area.",
+        "value": "principal_residence_in_declared_disaster_area",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The damaged property must be the household's principal place of residence and must be located within the declared Riverbend disaster area."
+      },
+      {
+        "subject": "other",
+        "statement": "Applicants who disagree with a decision may request an internal review within 28 days.",
+        "value": "internal_review_within_28_days",
+        "scope": "applicants who disagree with a decision",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applicants who disagree with a decision may request an internal review within 28 days."
+      }
+    ]
+  }
+}

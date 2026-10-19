@@ -1,0 +1,137 @@
+import { readFileSync } from "node:fs";
+import YAML from "yaml";
+import { db, transaction } from "./db.ts";
+import { sha256 } from "./hash.ts";
+import { append } from "./ledger.ts";
+import { scoringConfig, taxonomy } from "./config.ts";
+
+/** Reads a record file (Markdown + YAML front matter), hashes the bytes and stores it once. */
+
+export const RECORD_STATUSES = ["declared", "final", "draft", "ai_generated", "unknown"] as const;
+export type RecordStatus = (typeof RECORD_STATUSES)[number];
+
+export interface DocumentRow {
+  id: string;
+  title: string;
+  series: string | null;
+  version: number | null;
+  unit: string;
+  region: string;
+  creator: string | null;
+  function: string;
+  custody: string; // JSON array
+  record_status: RecordStatus;
+  date: string;
+  review_date: string | null;
+  in_ai_scope_initial: number;
+  cites: string; // JSON array
+  text: string;
+  sha256: string;
+  source_path: string;
+  ingested_at: string;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ID = /^[A-Za-z0-9_-]{1,40}$/;
+
+export function parseRecord(raw: string): { meta: Record<string, unknown>; body: string } {
+  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!m) throw new Error("Missing YAML front matter.");
+  const meta = YAML.parse(m[1]);
+  if (!meta || typeof meta !== "object") throw new Error("Front matter is not a mapping.");
+  return { meta: meta as Record<string, unknown>, body: m[2].trim() };
+}
+
+function str(meta: Record<string, unknown>, key: string, required: boolean): string | null {
+  const v = meta[key];
+  if (v === undefined || v === null || v === "") {
+    if (required) throw new Error(`Front matter is missing "${key}".`);
+    return null;
+  }
+  if (typeof v !== "string" && typeof v !== "number") throw new Error(`"${key}" must be text.`);
+  return String(v);
+}
+
+function list(meta: Record<string, unknown>, key: string): string[] {
+  const v = meta[key] ?? [];
+  const arr = Array.isArray(v) ? v : [v];
+  if (!arr.every((x) => typeof x === "string")) throw new Error(`"${key}" must be a list of text.`);
+  return arr as string[];
+}
+
+/** Validates front matter against the taxonomy and scoring config. Throws on anything unknown. */
+export function toDocumentRow(meta: Record<string, unknown>, body: string, fileHash: string, sourcePath: string) {
+  const tax = taxonomy();
+  const id = str(meta, "id", true)!;
+  if (!ID.test(id)) throw new Error(`Invalid document id "${id}".`);
+  const unit = str(meta, "unit", true)!;
+  if (unit !== "unknown" && !tax.units[unit]) throw new Error(`Unknown unit "${unit}".`);
+  const fn = str(meta, "function", true)!;
+  if (!tax.functions[fn]) throw new Error(`Unknown business function "${fn}".`);
+  const custody = list(meta, "custody");
+  const known = scoringConfig().custody;
+  if (!custody.length || custody.some((c) => known[c] === undefined)) {
+    throw new Error(`Custody must be a list of: ${Object.keys(known).join(", ")}.`);
+  }
+  const status = str(meta, "record_status", true) as RecordStatus;
+  if (!RECORD_STATUSES.includes(status)) throw new Error(`record_status must be one of ${RECORD_STATUSES.join(", ")}.`);
+  const date = str(meta, "date", true)!;
+  const review = str(meta, "review_date", false);
+  if (!ISO_DATE.test(date) || (review && !ISO_DATE.test(review))) throw new Error("Dates must be YYYY-MM-DD.");
+  const version = str(meta, "version", false);
+  if (version !== null && !/^\d+$/.test(version)) throw new Error("version must be a whole number.");
+  if (typeof meta.in_ai_scope !== "boolean") throw new Error('"in_ai_scope" must be true or false.');
+  if (!body) throw new Error("Document body is empty.");
+
+  const row: DocumentRow = {
+    id,
+    title: str(meta, "title", true)!,
+    series: str(meta, "series", false),
+    version: version === null ? null : Number(version),
+    unit,
+    region: tax.units[unit]?.region ?? "unknown",
+    creator: str(meta, "creator", false),
+    function: fn,
+    custody: JSON.stringify(custody),
+    record_status: status,
+    date,
+    review_date: review,
+    in_ai_scope_initial: meta.in_ai_scope ? 1 : 0,
+    cites: JSON.stringify(list(meta, "cites")),
+    text: body,
+    sha256: fileHash,
+    source_path: sourcePath,
+    ingested_at: new Date().toISOString(),
+  };
+  return row;
+}
+
+export function getDocument(id: string): DocumentRow | undefined {
+  return db().prepare("SELECT * FROM documents WHERE id = ?").get(id) as DocumentRow | undefined;
+}
+
+export function allDocuments(): DocumentRow[] {
+  return db().prepare("SELECT * FROM documents ORDER BY id").all() as unknown as DocumentRow[];
+}
+
+/** `sourcePath` is relative to the repo root so the tamper check can re-read it. */
+export function ingestFile(sourcePath: string, actor: string): DocumentRow {
+  const bytes = readFileSync(sourcePath);
+  const { meta, body } = parseRecord(bytes.toString("utf8"));
+  const row = toDocumentRow(meta, body, sha256(bytes), sourcePath);
+  if (getDocument(row.id)) throw new Error(`${row.id} is already ingested. Originals are never replaced.`);
+  return transaction(() => {
+    const cols = Object.keys(row) as (keyof DocumentRow)[];
+    db()
+      .prepare(`INSERT INTO documents (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`)
+      .run(...cols.map((c) => row[c]));
+    append({
+      actor,
+      action: "INGEST",
+      targetType: "document",
+      targetId: row.id,
+      payload: { sha256: row.sha256, source_path: sourcePath, title: row.title },
+    });
+    return row;
+  });
+}

@@ -1,0 +1,37 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "3f5ab7fc8a57d15d379ce2b4a7558961a9b7124a1cc1bd9e745a1c8fcefcd449",
+  "created_at": "2026-10-19T01:29:57.260Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "proof_of_address",
+        "statement": "The report recommends that the department accept statutory declarations or letters from community organisations as proof of address for households in remote communities.",
+        "value": "community_organisation_letter;statutory_declaration",
+        "scope": "households in remote communities",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "We recommend that the department accept statutory declarations or letters from community organisations as proof of address for households in remote communities."
+      },
+      {
+        "subject": "other",
+        "statement": "The report states that accepting statutory declarations or community organisation letters would bring the hotline into line with the Regional Office's existing practice.",
+        "value": "regional_office_existing_practice_accepts_statutory_declarations_or_community_letters_as_proof_of_address",
+        "scope": "Riverbend Regional Office",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "This would bring the hotline into line with the Regional Office's existing practice."
+      },
+      {
+        "subject": "other",
+        "statement": "Householders reported being told by the grant hotline that they could not apply without a utility bill.",
+        "value": "hotline_told_applicants_utility_bill_required",
+        "scope": "callers to the grant hotline",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Several householders told us they had called the grant hotline and been told they could not apply without a utility bill."
+      }
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+# Sherlock scoring weights, lookups and bands.
+# Owned and approved by the information management team, like a disposal authority.
+
+weights:
+  provenance: 0.30
+  currency: 0.30
+  corroboration: 0.25
+  integrity: 0.15
+
+authority:
+  owner: 100
+  related: 60
+  other: 10
+
+# Custody is scored by the weakest link in the chain.
+custody:
+  records_system: 100
+  regional_records_system: 100
+  team_site: 70
+  email: 40
+  personal_drive: 40
+  external: 10
+
+currency:
+  later_declared_version: 10
+  review_current: 100
+  review_missing_or_passed: 50
+  superseded_penalty: 0.9
+
+corroboration:
+  contradicted: 0
+  unsupported: 0
+  two_or_more: 100
+  one: 60
+  none: 30
+  provisional_confidence: 0.8
+
+integrity:
+  tampered: 0
+  declared: 100
+  final: 80
+  draft: 40
+  unknown: 40
+  ai_generated: 20
+
+# Likelihood (1-5) from trust: first band whose `min` the trust meets.
+likelihood:
+  - { min: 80, level: 1, label: Rare }
+  - { min: 60, level: 2, label: Unlikely }
+  - { min: 40, level: 3, label: Possible }
+  - { min: 20, level: 4, label: Likely }
+  - { min: 0, level: 5, label: Almost certain }
+
+# Risk = likelihood x consequence. First band whose `max` the risk does not exceed.
+risk_bands:
+  - { max: 4, band: Low }
+  - { max: 9, band: Medium }
+  - { max: 16, band: High }
+  - { max: 25, band: Extreme }
+
+blocked_bands: [High, Extreme]

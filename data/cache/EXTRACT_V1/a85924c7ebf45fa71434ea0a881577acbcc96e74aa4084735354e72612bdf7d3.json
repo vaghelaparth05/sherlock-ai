@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "a85924c7ebf45fa71434ea0a881577acbcc96e74aa4084735354e72612bdf7d3",
+  "created_at": "2026-10-19T01:27:30.519Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $90,000 to be eligible.",
+        "value": "90000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $90,000."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Applications close on 31 October 2026.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Applications close on 31 October 2026."
+      }
+    ]
+  }
+}

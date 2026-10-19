@@ -1,0 +1,46 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "88a103e7dd175f08f6db2a0990add9a3874feeae4e44652227761708657dd989",
+  "created_at": "2026-10-19T01:27:31.555Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "A household must have a combined annual income below $90,000 to be eligible.",
+        "value": "90000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "To be eligible, a household must have a combined annual income below $90,000."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "Only owner-occupiers can apply; renters are not eligible.",
+        "value": "owner_occupiers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Only owner-occupiers can apply, so the grant is not open to people who rent the home they live in."
+      },
+      {
+        "subject": "other",
+        "statement": "The home must be the household's main residence and inside the declared disaster area.",
+        "value": "main_residence_inside_declared_disaster_area",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The home must be the household's main residence and must be inside the declared disaster area."
+      },
+      {
+        "subject": "other",
+        "statement": "The grant amount depends on the level of damage, assessed by the department after the application is lodged.",
+        "value": "amount_depends_on_damage_assessed_after_lodgement",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The amount depends on the level of damage, which is assessed by the department after the application is lodged."
+      }
+    ]
+  }
+}

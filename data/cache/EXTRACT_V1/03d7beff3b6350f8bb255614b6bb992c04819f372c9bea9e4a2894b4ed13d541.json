@@ -1,0 +1,55 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "03d7beff3b6350f8bb255614b6bb992c04819f372c9bea9e4a2894b4ed13d541",
+  "created_at": "2026-10-19T01:29:52.950Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "application_fees",
+        "statement": "The department does not charge applicants any fee to apply, to be assessed or to be paid.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The department does not charge applicants any fee to apply, to be assessed or to be paid."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "All sampled payments were made by electronic funds transfer to an account in the applicant's own name.",
+        "value": "eft_to_applicant_own_account",
+        "scope": "sampled Riverbend Flood Recovery Grant payments, 1 April to 31 May 2026",
+        "effective_from": "2026-04-01",
+        "effective_to": "2026-05-31",
+        "quote": "All sampled payments were made by electronic funds transfer to an account in the applicant's own name, and no payment was made to a third party."
+      },
+      {
+        "subject": "grant_amounts",
+        "statement": "Each sampled payment matched an approved tier: $2,000 for contents only, $5,000 for minor structural repairs, $10,000 for major structural repairs.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "Riverbend Flood Recovery Grant approved applications",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Each sampled payment matched an approved tier, being $2,000 where only contents were lost, $5,000 for minor structural repairs or $10,000 for major structural repairs."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "The department never asks applicants to pay money or to send funds to any account.",
+        "value": "department_never_asks_applicants_to_pay_or_send_funds",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Staff should continue to tell callers that the department never asks applicants to pay money or to send funds to any account."
+      },
+      {
+        "subject": "other",
+        "statement": "Management's completion date for accepted audit recommendations is 31 July 2026.",
+        "value": "recommendations_completion_due_2026_07_31",
+        "scope": "Finance and Customer Service recommendations",
+        "effective_from": "",
+        "effective_to": "2026-07-31",
+        "quote": "Management has accepted both recommendations, with completion due by 31 July 2026."
+      }
+    ]
+  }
+}

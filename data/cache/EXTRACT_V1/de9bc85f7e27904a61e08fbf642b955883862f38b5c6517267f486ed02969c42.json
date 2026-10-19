@@ -1,0 +1,19 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "de9bc85f7e27904a61e08fbf642b955883862f38b5c6517267f486ed02969c42",
+  "created_at": "2026-10-19T01:29:55.418Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "application_deadline",
+        "statement": "Applications for the Riverbend Flood Recovery Grant close on 31 October 2026.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Applications for the grant close on 31 October 2026, so expect the hotline to stay busy through spring."
+      }
+    ]
+  }
+}

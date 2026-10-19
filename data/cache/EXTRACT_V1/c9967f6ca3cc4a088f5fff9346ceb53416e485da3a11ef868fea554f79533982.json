@@ -1,0 +1,37 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "c9967f6ca3cc4a088f5fff9346ceb53416e485da3a11ef868fea554f79533982",
+  "created_at": "2026-10-19T01:29:56.763Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "The committee decided to raise the household income threshold from $90,000 to $120,000.",
+        "value": "120000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The committee decided to raise the household income threshold from $90,000 to $120,000 because of cost-of-living pressures in the Riverbend region."
+      },
+      {
+        "subject": "other",
+        "statement": "The average time to payment was reported as 26 days.",
+        "value": "average_time_to_payment_26_days",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The Chief Finance Officer reported that the average time to payment was 26 days."
+      },
+      {
+        "subject": "other",
+        "statement": "The committee asked Finance to aim for payment within 21 days by the end of July.",
+        "value": "payment_time_target_21_days_by_end_july",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-07-31",
+        "quote": "The committee asked Finance to aim for 21 days by the end of July."
+      }
+    ]
+  }
+}

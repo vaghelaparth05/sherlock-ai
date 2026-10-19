@@ -1,0 +1,64 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "52847689e4ecf582d0a12a06ae144f98a534c539075dd6bb8e54d5a3d893b04a",
+  "created_at": "2026-10-19T01:29:44.418Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "proof_of_address",
+        "statement": "Every applicant must provide a current utility bill or a lease showing the damaged property's address as proof of address.",
+        "value": "lease;utility_bill",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Every applicant must provide a current utility bill or a lease showing the damaged property's address as proof of address."
+      },
+      {
+        "subject": "other",
+        "statement": "The proof of address document must be in the applicant's name and dated within the six months before the floods.",
+        "value": "document_in_applicant_name_dated_within_six_months_before_floods",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The document must be in the applicant's name and must be dated within the six months before the floods."
+      },
+      {
+        "subject": "other",
+        "statement": "Electricity, gas, water and landline bills are accepted as utility bills.",
+        "value": "accepted_bills_electricity_gas_water_landline",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Electricity, gas, water and landline bills are accepted."
+      },
+      {
+        "subject": "other",
+        "statement": "A lease must be signed by both parties.",
+        "value": "lease_signed_by_both_parties",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "A lease must be signed by both parties."
+      },
+      {
+        "subject": "other",
+        "statement": "Handwritten notes, screenshots of bank transactions and documents in another person's name must not be accepted.",
+        "value": "not_accepted_handwritten_notes_bank_screenshots_other_person_name",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Do not accept handwritten notes, screenshots of bank transactions or documents in another person's name."
+      },
+      {
+        "subject": "other",
+        "statement": "An application cannot proceed to assessment until proof of address has been provided.",
+        "value": "no_assessment_without_proof_of_address",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "An application cannot proceed to assessment until proof of address has been provided."
+      }
+    ]
+  }
+}

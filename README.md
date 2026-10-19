@@ -22,16 +22,24 @@ Built for the RIMPA 2026 hackathon problem: *How might we build information mana
 
 ## Run it
 
+Needs Node 24 (`nvm use`).
+
 ```bash
 npm install
+export ANTHROPIC_API_KEY=...        # or put it in .env.local
+npm run seed                        # resets data/sherlock.db: ingest data/corpus, extract claims, score
 npm run dev
+npm test
+SHERLOCK_OFFLINE=1 npm run seed     # replay model results from data/cache only, no network
 ```
 
 Open http://localhost:3000. Uploaded files are written to `data/uploads/` (git-ignored).
 
+Backend API: `GET /api/register` (every document with trust, risk and gate), `GET /api/register/:id` (score breakdown, claims, ledger), `POST /api/register/:id/override` (`{actor, reason}`).
+
 ## Stack
 
-Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. Route handlers under `src/app/api` are the backend for now.
+Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. The backend is route handlers under `src/app/api` over `src/lib`: SQLite (`node:sqlite`), Claude via `@anthropic-ai/sdk` for claim extraction (model from `SHERLOCK_MODEL`, default `claude-sonnet-5-5`), scoring weights in `config/scoring.yaml`, classification in `data/taxonomy.yaml`.
 
 ## Status
 
@@ -43,4 +51,6 @@ Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. Route handlers 
 - [x] Sources list and source detail pages, sample data
 - [ ] Step 4: Load new documents, then Summary and charts
 - [ ] Step 5: User review queue and audit log
-- [ ] Real database connector, Gemini claim extraction
+- [x] Backend P0: demo corpus, taxonomy, scoring config, ingest with SHA-256, Claude claim extraction with cache and verbatim-quote check, hash-chained ledger, trust/risk scoring, gate, register API
+- [ ] Backend P1: echo detection, conflict classification, review queue, upload flow, impact and recall, bias view
+- [ ] Real database connector

@@ -1,0 +1,37 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "354e538d70ce8faf8717ee20febd668b2730ceff863fbb328c40a31d9051f3a3",
+  "created_at": "2026-10-19T01:29:48.046Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "proof_of_address",
+        "statement": "Hotline staff told remote applicants they could not apply without a utility bill or lease in their own name.",
+        "value": "lease;utility_bill",
+        "scope": "remote community applicants, as told by hotline staff",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Each of them said they were told they could not apply because they did not have a utility bill or lease in their own name."
+      },
+      {
+        "subject": "other",
+        "statement": "The declared remote community applications procedure already covers households from remote communities who lack a utility bill or lease.",
+        "value": "remote_community_procedure_covers_applicants_without_utility_bill_or_lease",
+        "scope": "applicants in declared remote communities",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Our declared remote community applications procedure already covers these households, but it sits in the regional records system, which hotline staff cannot see."
+      },
+      {
+        "subject": "other",
+        "statement": "The department's AI assistant goes live on 1 July.",
+        "value": "ai_assistant_go_live_2026-07-01",
+        "scope": "department",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Could we meet this week to work out how to get the procedure in front of hotline staff before the department's AI assistant goes live on 1 July?"
+      }
+    ]
+  }
+}

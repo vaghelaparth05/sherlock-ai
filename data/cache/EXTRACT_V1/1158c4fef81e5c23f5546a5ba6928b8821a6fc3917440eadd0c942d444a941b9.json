@@ -1,0 +1,46 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "1158c4fef81e5c23f5546a5ba6928b8821a6fc3917440eadd0c942d444a941b9",
+  "created_at": "2026-10-19T01:29:43.551Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "Households with a combined annual income below $120,000 can apply.",
+        "value": "120000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Households with a combined annual income below $120,000 can apply."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "The grant is available to owner-occupiers only.",
+        "value": "owner_occupiers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is available to owner-occupiers only."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "Callers who rent their home are not eligible under the current guidelines.",
+        "value": "owner_occupiers",
+        "scope": "renters",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "If the caller rents their home, explain that they are not eligible under the current guidelines."
+      },
+      {
+        "subject": "proof_of_address",
+        "statement": "Every applicant must provide a current utility bill or a lease showing the damaged property's address as proof of address.",
+        "value": "lease;utility_bill",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Every applicant must provide a current utility bill or a lease showing the damaged property's address as proof of address."
+      }
+    ]
+  }
+}

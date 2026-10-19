@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "d17b58be6351ff42d72cbdd3b754b9def03db824c20f28a2a9a2e85bcfbede59",
+  "created_at": "2026-10-19T01:29:40.059Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "grant_amounts",
+        "statement": "Eligible households will receive $2,000 for lost contents, $5,000 for minor structural damage, or $10,000 for major structural damage.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "eligible Riverbend households affected by the February floods",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Eligible households will receive $2,000 to replace lost contents, $5,000 where the home has minor structural damage, or $10,000 where the damage is major."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Households have until 31 October 2026 to lodge an application.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Households have until 31 October 2026 to lodge an application."
+      }
+    ]
+  }
+}

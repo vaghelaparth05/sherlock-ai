@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "9c25386a12053c7df7b8f5d7363aa9a1c8b9ef0988c987c19648a43a8da4cba9",
+  "created_at": "2026-10-19T01:29:50.194Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "Under the current guidelines, households earning less than $120,000 a year are eligible for the grant.",
+        "value": "120000",
+        "scope": "all applicants (households)",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Under the current guidelines, households earning less than $120,000 a year are eligible for the grant."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "The closing date for applications is 31 October 2026 and no extension is proposed at this stage.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The closing date for applications remains 31 October 2026, and no extension is proposed at this stage."
+      }
+    ]
+  }
+}

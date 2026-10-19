@@ -1,0 +1,46 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "c7be1a8aaeb293fd41dc9f6f40c9de10a814f9c8c64b838f25fa4f1ba441ed74",
+  "created_at": "2026-10-19T01:29:48.048Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "grant_amounts",
+        "statement": "Eligible households receive $2,000 for contents, $5,000 for minor structural damage, or $10,000 for major structural damage.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "all eligible households",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Eligible households will receive $2,000 to replace lost contents, $5,000 where the home has minor structural damage, or $10,000 where the damage is major."
+      },
+      {
+        "subject": "eligible_tenure",
+        "statement": "The grant is available to owner-occupiers only.",
+        "value": "owner_occupiers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is available to owner-occupiers only."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Applications close on 31 October 2026.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Applications close on 31 October 2026."
+      },
+      {
+        "subject": "application_fees",
+        "statement": "Applying for the grant is free.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Applying is free and can be done online or by calling the grant hotline."
+      }
+    ]
+  }
+}
