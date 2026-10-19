@@ -119,7 +119,9 @@ export function db(): DatabaseSync {
     const file = process.env.SHERLOCK_DB ?? path.join(process.cwd(), "data", "sherlock.db");
     if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true });
     conn = new DatabaseSync(file);
-    conn.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+    // Rollback journal, not WAL: the dev server, seed and scripts share this file, and WAL's
+    // side files can be orphaned under one process, leaving it on a stale private copy.
+    conn.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = DELETE; PRAGMA foreign_keys = ON;");
     conn.exec(SCHEMA);
   }
   return conn;
