@@ -46,7 +46,7 @@ export function parseRecord(raw: string): { meta: Record<string, unknown>; body:
 function str(meta: Record<string, unknown>, key: string, required: boolean): string | null {
   const v = meta[key];
   if (v === undefined || v === null || v === "") {
-    if (required) throw new Error(`Provenance is missing "${key}".`);
+    if (required) throw new Error(`Provenance is missing "${key}". Choose it on the upload form, or add it to the record's front matter.`);
     return null;
   }
   if (typeof v !== "string" && typeof v !== "number") throw new Error(`"${key}" must be text.`);

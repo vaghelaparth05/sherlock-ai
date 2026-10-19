@@ -164,3 +164,15 @@ test("a record's own front matter wins over batch provenance", async () => {
   });
   assert.deepEqual([row.title, row.unit, row.custody, row.record_status, row.date], ["Test record", "Finance", '["records_system"]', "declared", "2026-08-01"]);
 });
+
+test("a plain Markdown file with no front matter is captured with the form's provenance", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "sherlock-plainmd-"));
+  const file = path.join(dir, "authority.md");
+  writeFileSync(file, "Title: Records Authority 2024/00561247\n\n# Records Authority\n\nGrant application files: destroy 10 years after action completed.\n");
+  const row = await captureFile({
+    sourcePath: file, ext: "md", actor: "CSO-014 (contributor)", reviewRequired: true,
+    meta: { title: "authority", unit: "unknown", function: "governance", custody: ["external"], record_status: "unknown", date: "2026-10-19", in_ai_scope: true },
+  });
+  assert.deepEqual([row.unit, row.function, row.in_ai_scope_initial], ["unknown", "governance", 0]);
+  assert.match(row.text, /destroy 10 years after action completed/);
+});

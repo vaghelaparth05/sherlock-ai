@@ -47,13 +47,12 @@ export async function POST(request: Request) {
   const meta: Record<string, unknown> = Object.fromEntries(FIELDS.map((k) => [k, field(k)]));
   const custody = field("custody");
   if (custody) meta.custody = custody.split(/[,>]/).map((c) => c.trim()).filter(Boolean);
-  if (ext !== "md") {
-    meta.title ||= file.name.replace(/\.[^.]+$/, "");
-    meta.date ||= new Date().toISOString().slice(0, 10);
-    meta.record_status ||= "unknown";
-    meta.unit ||= "unknown";
-    meta.in_ai_scope = field("in_ai_scope") !== "false";
-  }
+  // Defaults for anything the form leaves out. A Markdown record's own front matter still wins.
+  meta.title ||= file.name.replace(/\.[^.]+$/, "");
+  meta.date ||= new Date().toISOString().slice(0, 10);
+  meta.record_status ||= "unknown";
+  meta.unit ||= "unknown";
+  meta.in_ai_scope = field("in_ai_scope") !== "false";
 
   const sourcePath = path.join("data", "uploads", "records", `${hash}.${ext}`);
   mkdirSync(path.dirname(sourcePath), { recursive: true });

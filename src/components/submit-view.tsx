@@ -31,7 +31,14 @@ export function SubmitView() {
   const [provenance, setProvenance] = useState<Provenance>({ ...EMPTY_PROVENANCE, custody: "external,team_site", record_status: "unknown" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const markdown = file?.name.toLowerCase().endsWith(".md");
+  // Only a Markdown record that starts with YAML front matter carries its own provenance.
+  const [frontMatter, setFrontMatter] = useState(false);
+  const markdown = frontMatter;
+  async function choose(f: File | null) {
+    setFile(f);
+    setMessage(null);
+    setFrontMatter(Boolean(f?.name.toLowerCase().endsWith(".md") && /^---\r?\n/.test(await f.slice(0, 8).text())));
+  }
 
   async function submit() {
     if (!file) return;
@@ -84,7 +91,7 @@ export function SubmitView() {
                 <span className="block text-[12px] text-muted">PDF, Word, HTML, email, text or Markdown. Scans and photos are kept for OCR.</span>
               </span>
             </button>
-            <input ref={input} type="file" accept={ACCEPT_ATTR} className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <input ref={input} type="file" accept={ACCEPT_ATTR} className="hidden" onChange={(e) => choose(e.target.files?.[0] ?? null)} />
             {file && !markdown && (
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -101,6 +108,7 @@ export function SubmitView() {
               </>
             )}
             {markdown && <p className="text-[12px] text-muted">This Markdown record carries its own provenance in its front matter.</p>}
+            {file && !markdown && file.name.toLowerCase().endsWith(".md") && <p className="text-[12px] text-muted">This Markdown file has no front matter, so tell Sherlock where it came from.</p>}
             <button type="button" disabled={!file || busy} onClick={submit} className="rounded-md bg-fg px-4 py-2.5 text-[13px] font-medium text-bg transition hover:opacity-85 disabled:opacity-35">
               {busy ? "Checking…" : "Submit for review"}
             </button>

@@ -89,6 +89,8 @@ export function ImportView() {
   const [navigateAfterUpload, setNavigateAfterUpload] = useState(false);
   const [enqueue] = useState(() => createQueue(4));
   const files = useRef(new Map<string, File>());
+  /** Names of Markdown files that start with YAML front matter, so carry their own provenance. */
+  const frontMatter = useRef(new Set<string>());
   const collectionRef = useRef(collection);
   const [provenance, setProvenance] = useState<Provenance>(EMPTY_PROVENANCE);
   const [scanning, setScanning] = useState(false);
@@ -98,7 +100,7 @@ export function ImportView() {
     if (!ready.length || scanning) return;
     const uploads = ready.filter((i) => i.origin === "upload").map((i) => i.id);
     const sample = ready.some((i) => i.origin === "sample");
-    const needsProvenance = ready.some((i) => i.origin === "upload" && i.ext !== "md");
+    const needsProvenance = ready.some((i) => i.origin === "upload" && !(i.ext === "md" && frontMatter.current.has(i.name)));
     if (needsProvenance && !provenance.function) {
       setNotice("Choose the business function for these files before scanning.");
       return;
@@ -115,15 +117,14 @@ export function ImportView() {
         });
         if (r.failed.length) setNotice(`${r.failed.length} file${r.failed.length > 1 ? "s" : ""} could not be scanned: ${r.failed.map((f) => `${f.file} (${f.error})`).join("; ")}`);
       }
-      sessionStorage.setItem("sherlock-investigation", JSON.stringify({ collection: collection.trim() || "Untitled collection", documents: ready }));
       await refresh();
-      router.push("/scan");
+      router.push("/results");
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "The scan failed.");
     } finally {
       setScanning(false);
     }
-  }, [items, collection, router, provenance, scanning, refresh]);
+  }, [items, router, provenance, scanning, refresh]);
 
   useEffect(() => {
     if (!navigateAfterUpload || !items.length || items.some((item) => item.status !== "ready")) return;
@@ -202,6 +203,11 @@ export function ImportView() {
       const fresh: ImportItem[] = [];
       let skipped = 0;
       for (const file of incoming) {
+        if (file.name.toLowerCase().endsWith(".md")) {
+          file.slice(0, 8).text().then((head) => {
+            if (/^---\r?\n/.test(head)) frontMatter.current.add(file.name);
+          });
+        }
         const dupe = items.some((i) => i.name === file.name && i.size === file.size) ||
           fresh.some((i) => i.name === file.name && i.size === file.size);
         if (dupe) {
