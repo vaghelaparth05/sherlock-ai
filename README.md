@@ -37,8 +37,10 @@ Next.js 16 (App Router), React 19, Tailwind 4, Motion and Geist. Route handlers 
 
 - [x] Design document and clickable prototype
 - [x] Step 1: Import page (multi-file and folder upload with SHA-256, database tab with a **mocked** connection, sample set)
+- [x] Dashboard for returning users (sample data)
 - [ ] Step 2: Scanning screen
-- [ ] Step 3: Results (bias, misinformation, disinformation)
+- [x] Step 3: Results (bias, misinformation, disinformation), data-driven, sample data
+- [x] Sources list and source detail pages, sample data
 - [ ] Step 4: Load new documents, then Summary and charts
 - [ ] Step 5: User review queue and audit log
 - [ ] Real database connector, Gemini claim extraction

@@ -74,7 +74,12 @@ export function sourceNamesOf(f: Finding): string[] {
   return [...new Set(f.docIds.map((id) => docById(id)?.source).filter((s): s is string => !!s))];
 }
 
+export const slugOf = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
 export interface SourceStat {
+  slug: string;
+  /** Claims that have actually been checked: held up, still under review, or superseded. */
+  checked: { held: number; total: number; pct: number | null };
   name: string;
   documents: SourceDoc[];
   years: [number, number];
@@ -102,10 +107,66 @@ export function sourceStats(findings: Finding[]): SourceStat[] {
       const years = documents.map((d) => d.year);
       const verdict: SourceStat["verdict"] =
         own.length === 0 ? "echo" : buckets.review > 0 || buckets.superseded > 0 || openFlags > 0 ? "attention" : "reliable";
-      return { name, documents, years: [Math.min(...years), Math.max(...years)] as [number, number], own, repeats, buckets, openFlags, verdict };
+      const checkedTotal = buckets.good + buckets.review + buckets.superseded;
+      const checked = {
+        held: buckets.good,
+        total: checkedTotal,
+        pct: checkedTotal ? Math.round((buckets.good / checkedTotal) * 100) : null,
+      };
+      return {
+        slug: slugOf(name),
+        checked,
+        name,
+        documents,
+        years: [Math.min(...years), Math.max(...years)] as [number, number],
+        own,
+        repeats,
+        buckets,
+        openFlags,
+        verdict,
+      };
     })
     .sort((a, b) => {
       const rank = { attention: 0, echo: 1, reliable: 2 } as const;
       return rank[a.verdict] - rank[b.verdict] || b.openFlags - a.openFlags;
     });
+}
+
+export function sourceSlugs(): string[] {
+  return [...new Set(DOCS.map((d) => d.source))].map(slugOf);
+}
+
+export interface SourceDetail {
+  stat: SourceStat;
+  activity: { year: number; documents: number; claims: number }[];
+  peakYears: number[];
+  repeatsFrom: { claim: Claim; origin: SourceDoc | undefined }[];
+  related: Finding[];
+}
+
+export function sourceDetail(findings: Finding[], slug: string): SourceDetail | null {
+  const stat = sourceStats(findings).find((s) => s.slug === slug);
+  if (!stat) return null;
+
+  const allYears = DOCS.map((d) => d.year);
+  const first = Math.min(...allYears);
+  const last = Math.max(...allYears);
+  const activity = Array.from({ length: last - first + 1 }, (_, i) => {
+    const year = first + i;
+    return {
+      year,
+      documents: stat.documents.filter((d) => d.year === year).length,
+      claims: stat.own.filter((c) => docById(c.origin)?.year === year).length,
+    };
+  });
+  const most = Math.max(...activity.map((a) => a.documents));
+
+  const docIds = new Set(stat.documents.map((d) => d.id));
+  return {
+    stat,
+    activity,
+    peakYears: most > 0 ? activity.filter((a) => a.documents === most).map((a) => a.year) : [],
+    repeatsFrom: stat.repeats.map((claim) => ({ claim, origin: docById(claim.origin) })),
+    related: findings.filter((f) => f.docIds.some((id) => docIds.has(id))),
+  };
 }

@@ -4,7 +4,7 @@ import { Search, X } from "lucide-react";
 import clsx from "clsx";
 import { SEVERITIES, type Filters } from "@/lib/results-derive";
 
-function Segmented<T extends string>({
+export function Segmented<T extends string>({
   value,
   options,
   onChange,
