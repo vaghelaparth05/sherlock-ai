@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import clsx from "clsx";
 import { TopNav } from "@/components/top-nav";
 import { Dropzone } from "@/components/dropzone";
@@ -12,12 +13,29 @@ import { DatabasePanel } from "@/components/database-panel";
 import { SummaryPanel } from "@/components/summary-panel";
 import { SAMPLE_COLLECTION, type ImportItem } from "@/lib/format";
 
-const TABS = [
+const ALL_TABS = [
   { id: "upload", label: "Upload files" },
   { id: "database", label: "Database" },
   { id: "sample", label: "Sample set" },
 ] as const;
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof ALL_TABS)[number]["id"];
+
+/** Minimal public header for the normal-user upload page — no manager nav. */
+function PublicHeader() {
+  return (
+    <header className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
+      <Link href="/" className="flex items-center gap-2.5">
+        <span className="grid size-7 place-items-center rounded-md border border-line-strong bg-elevated">
+          <Search className="size-3.5 text-fg" strokeWidth={2.25} />
+        </span>
+        <span className="text-sm font-semibold tracking-tight">Sherlock.ai</span>
+      </Link>
+      <Link href="/login" className="rounded-md border border-line-strong bg-elevated px-3 py-1.5 text-[13px] font-medium transition hover:bg-hover">
+        Log in
+      </Link>
+    </header>
+  );
+}
 
 interface ServerDoc {
   id: string;
@@ -75,8 +93,9 @@ function createQueue(limit: number) {
   };
 }
 
-export function ImportView() {
+export function ImportView({ mode = "manager" }: { mode?: "manager" | "user" }) {
   const router = useRouter();
+  const TABS = mode === "user" ? ALL_TABS.filter((t) => t.id !== "database") : ALL_TABS;
   const [tab, setTab] = useState<TabId>("upload");
   const [items, setItems] = useState<ImportItem[]>([]);
   const [collection, setCollection] = useState("");
@@ -225,7 +244,7 @@ export function ImportView() {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[420px]" aria-hidden />
-      <TopNav active={0} />
+      {mode === "user" ? <PublicHeader /> : <TopNav active={0} />}
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-12">
         <motion.div
@@ -233,14 +252,17 @@ export function ImportView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-subtle px-2.5 py-1 text-[12px] text-muted">
-            <span className="breathe size-1.5 rounded-full bg-success" />
-            Step 1 of 5
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Import documents</h1>
+          {mode === "manager" && (
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-subtle px-2.5 py-1 text-[12px] text-muted">
+              <span className="breathe size-1.5 rounded-full bg-success" />
+              Step 1 of 5
+            </p>
+          )}
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Upload your documents</h1>
           <p className="mt-2 max-w-xl text-[15px] text-muted">
-            Bring in the documents you want Sherlock to investigate. Upload files, connect a database, or start with a
-            sample set.
+            {mode === "user"
+              ? "Drop in a folder of files on one topic. Sherlock will investigate them — sign in afterwards to see what it found."
+              : "Bring in the documents you want Sherlock to investigate. Upload files, connect a database, or start with a sample set."}
           </p>
         </motion.div>
 
@@ -362,7 +384,7 @@ export function ImportView() {
               collection={collection}
               onCollectionChange={setCollection}
               onClear={clearAll}
-              onStart={() => router.push("/scan")}
+              onStart={() => router.push(mode === "user" ? "/status" : "/results")}
             />
           </motion.div>
         </div>

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { LayoutDashboard, Search } from "lucide-react";
+import { LayoutDashboard, LogOut, Search } from "lucide-react";
 import clsx from "clsx";
+import { logoutAction } from "@/app/actions/auth";
 
 const STEPS = ["Import", "Scan", "Results", "Review", "Summary"] as const;
 
@@ -74,6 +75,19 @@ export function TopNav({ active = -1, current }: { active?: number; current?: "d
               </div>
             );
           })}
+
+          <span aria-hidden className="mx-1.5 hidden h-4 w-px bg-line sm:block" />
+
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] text-faint transition hover:text-fg"
+              title="Log out"
+            >
+              <LogOut className="size-3.5" />
+              <span className="hidden sm:inline">Log out</span>
+            </button>
+          </form>
         </nav>
       </div>
     </header>

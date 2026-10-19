@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+import { LandingView } from "@/components/landing-view";
+
+export const metadata = { title: "Sherlock.ai" };
 
 export default function Home() {
-  redirect("/dashboard");
+  return <LandingView />;
 }
