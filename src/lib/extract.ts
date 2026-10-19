@@ -2,7 +2,7 @@ import { db, transaction } from "./db.ts";
 import { canonicalJson, sha256 } from "./hash.ts";
 import { append, entriesFor } from "./ledger.ts";
 import { getDocument, type DocumentRow } from "./ingest.ts";
-import { taxonomy, type Taxonomy } from "./config.ts";
+import { subjectsFor, type Taxonomy } from "./config.ts";
 import { structuredCall } from "./llm.ts";
 
 /** EXTRACT_V1: claims from one document. Every quote must appear verbatim in the text. */
@@ -125,7 +125,7 @@ export async function extractDocument(id: string): Promise<{ accepted: number; r
     return { accepted: claimsFor(id).length, rejected: entriesFor(id, "EXTRACT_REJECTED").length, cached: true };
   }
 
-  const subjects = taxonomy().subjects;
+  const subjects = subjectsFor(doc.function);
   const result = await structuredCall<{ claims: RawClaim[] }>({
     promptVersion: PROMPT_VERSION,
     system: SYSTEM,

@@ -6,7 +6,7 @@ import YAML from "yaml";
 export interface Taxonomy {
   regions: Record<string, { name: string }>;
   units: Record<string, { region: string; serves: string }>;
-  functions: Record<string, { owner: string; related: string[]; consequence: number }>;
+  functions: Record<string, { owner: string; related: string[]; consequence: number; subjects?: string[] }>;
   subjects: Record<string, { label: string; value: string }>;
 }
 
@@ -46,3 +46,11 @@ let cfg: ScoringConfig | undefined;
 
 export const taxonomy = (): Taxonomy => (tax ??= load<Taxonomy>("data/taxonomy.yaml"));
 export const scoringConfig = (): ScoringConfig => (cfg ??= load<ScoringConfig>("config/scoring.yaml"));
+
+/** The subjects a business function classifies claims into: its own list, else every subject no function claims. */
+export function subjectsFor(fn: string): Taxonomy["subjects"] {
+  const tax = taxonomy();
+  const own = tax.functions[fn]?.subjects;
+  const claimed = new Set(Object.values(tax.functions).flatMap((f) => f.subjects ?? []));
+  return Object.fromEntries(Object.entries(tax.subjects).filter(([key]) => (own ? own.includes(key) : !claimed.has(key))));
+}
