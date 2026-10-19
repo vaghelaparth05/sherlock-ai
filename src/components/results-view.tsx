@@ -11,7 +11,7 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
 import { FilterBar } from "@/components/results/filter-bar";
 import { FindingCard } from "@/components/results/finding-card";
-import { FindingDrawer } from "@/components/results/finding-drawer";
+import { FindingDrawer, type ReviewEntry } from "@/components/results/finding-drawer";
 import { SourceList } from "@/components/results/source-list";
 import { TYPE_META } from "@/lib/mock-dashboard";
 import { COLLECTION, DOCS, FINDINGS, type FindingStatus, type FindingType } from "@/lib/results-data";
@@ -24,6 +24,7 @@ export function ResultsView() {
   const [view, setView] = useState<"findings" | "sources">("findings");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reviewHistory, setReviewHistory] = useState<Record<string, ReviewEntry[]>>({});
 
   const summary = useMemo(() => summarise(findings), [findings]);
   const visible = useMemo(() => applyFilters(findings, filters), [findings, filters]);
@@ -32,10 +33,22 @@ export function ResultsView() {
 
   const sourceCount = new Set(DOCS.map((d) => d.source)).size;
 
-  const decide = useCallback((id: string, status: FindingStatus) => {
+  const decide = useCallback((id: string, status: FindingStatus, note?: string) => {
     setFindings((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
+    if (status !== "open" && note) {
+      const entry: ReviewEntry = {
+        status,
+        note,
+        reviewedAt: new Date().toLocaleString(),
+      };
+      setReviewHistory((history) => ({
+        ...history,
+        [id]: [...(history[id] ?? []), entry],
+      }));
+    }
     if (status !== "open") setSelectedId(null);
   }, []);
+  const closeFinding = useCallback(() => setSelectedId(null), []);
 
   const tab = view === "sources" ? "sources" : filters.type;
   const tabs: { id: "all" | FindingType | "sources"; label: string; count: number }[] = [
@@ -223,7 +236,12 @@ export function ResultsView() {
         <p className="pt-10 text-center text-[12px] text-faint">Showing sample data. Real findings appear once scanning is connected.</p>
       </main>
 
-      <FindingDrawer finding={selected} onClose={() => setSelectedId(null)} onDecide={decide} />
+      <FindingDrawer
+        finding={selected}
+        onClose={closeFinding}
+        onDecide={decide}
+        reviewHistory={selected ? reviewHistory[selected.id] ?? [] : []}
+      />
     </div>
   );
 }

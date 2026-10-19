@@ -6,7 +6,7 @@ import { SOURCE_WATCH } from "@/lib/mock-dashboard";
 const SEGMENTS = [
   { key: "corroborated", label: "Corroborated", color: "var(--success)" },
   { key: "single", label: "Single source", color: "var(--fg-faint)" },
-  { key: "review", label: "Needs review", color: "var(--misinfo)" },
+  { key: "review", label: "Needs review", color: "var(--warning)" },
   { key: "superseded", label: "Superseded", color: "var(--disinfo)" },
 ] as const;
 

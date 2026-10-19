@@ -8,12 +8,12 @@ import type { SourceStat } from "@/lib/results-derive";
 export const RECORD_SEGMENTS = [
   { key: "good", label: "Held up", color: "var(--success)" },
   { key: "single", label: "Single source, unchecked", color: "var(--fg-faint)" },
-  { key: "review", label: "Under review", color: "var(--misinfo)" },
+  { key: "review", label: "Under review", color: "var(--warning)" },
   { key: "superseded", label: "Superseded", color: "var(--disinfo)" },
 ] as const;
 
 export const VERDICT = {
-  attention: { label: "Needs attention", color: "var(--misinfo)", bg: "var(--misinfo-soft)" },
+  attention: { label: "Needs attention", color: "var(--warning)", bg: "var(--warning-soft)" },
   echo: { label: "Only repeats others", color: "var(--fg-muted)", bg: "var(--bg-elevated)" },
   reliable: { label: "Holding up", color: "var(--success)", bg: "var(--success-soft)" },
 } as const;

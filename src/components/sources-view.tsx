@@ -38,7 +38,7 @@ export function SourcesView() {
 
   const tiles = [
     { label: "Sources", value: counts.total, color: "var(--fg)" },
-    { label: "Need attention", value: counts.attention, color: "var(--misinfo)" },
+    { label: "Need attention", value: counts.attention, color: "var(--warning)" },
     { label: "Only repeat others", value: counts.echo, color: "var(--fg-muted)" },
     { label: "Holding up", value: counts.reliable, color: "var(--success)" },
   ];

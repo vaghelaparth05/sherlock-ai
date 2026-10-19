@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { LayoutDashboard, Search } from "lucide-react";
 import clsx from "clsx";
+import { AppearanceToggle } from "@/components/appearance-toggle";
 
 const STEPS = ["Import", "Scan", "Results", "Review", "Summary"] as const;
 
@@ -74,6 +75,8 @@ export function TopNav({ active = -1, current }: { active?: number; current?: "d
               </div>
             );
           })}
+          <span aria-hidden className="mx-1.5 hidden h-4 w-px bg-line sm:block" />
+          <AppearanceToggle />
         </nav>
       </div>
     </header>

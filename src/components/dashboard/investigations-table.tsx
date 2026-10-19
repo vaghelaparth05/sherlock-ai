@@ -6,7 +6,7 @@ import { ArrowRight, CircleCheck, LoaderCircle, MessageSquareWarning } from "luc
 import { INVESTIGATIONS, type InvestigationStatus } from "@/lib/mock-dashboard";
 
 const STATUS: Record<InvestigationStatus, { label: string; color: string; href: string; cta: string }> = {
-  "needs-review": { label: "Needs review", color: "var(--misinfo)", href: "/review", cta: "Resume" },
+  "needs-review": { label: "Needs review", color: "var(--warning)", href: "/review", cta: "Resume" },
   scanning: { label: "Scanning", color: "var(--accent)", href: "/scan", cta: "View" },
   resolved: { label: "Resolved", color: "var(--success)", href: "/results", cta: "Open" },
 };
