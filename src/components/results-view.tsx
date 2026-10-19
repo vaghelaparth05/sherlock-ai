@@ -11,43 +11,80 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
 import { FilterBar } from "@/components/results/filter-bar";
 import { FindingCard } from "@/components/results/finding-card";
-import { FindingDrawer, type ReviewEntry } from "@/components/results/finding-drawer";
+import { FindingDrawer } from "@/components/results/finding-drawer";
 import { SourceList } from "@/components/results/source-list";
 import { TYPE_META } from "@/lib/mock-dashboard";
-import { COLLECTION, DOCS, FINDINGS, type FindingStatus, type FindingType } from "@/lib/results-data";
+import type { FindingStatus, FindingType } from "@/lib/results-data";
+import type { Finding } from "@/lib/findings";
+import { postJson, useLive, useRequireUser } from "@/components/live-provider";
 import { TYPES, applyFilters, sourceStats, summarise, type Filters } from "@/lib/results-derive";
 
 const DEFAULT_FILTERS: Filters = { type: "all", severity: "all", status: "open", query: "", sort: "severity" };
 
 export function ResultsView({ reviewMode = false }: { reviewMode?: boolean }) {
-  const [findings, setFindings] = useState(FINDINGS);
+  useRequireUser("information_manager");
+  const { results, loaded, refresh } = useLive();
+  const COLLECTION = results.collection;
+  // Decisions show at once; the next refresh brings the same status back from the ledger.
+  const [decided, setDecided] = useState<Record<string, FindingStatus>>({});
+  const findings = useMemo<Finding[]>(
+    () => results.findings.map((f) => (decided[f.id] && f.status === "open" ? { ...f, status: decided[f.id] } : f)),
+    [results.findings, decided],
+  );
   const [view, setView] = useState<"findings" | "sources">("findings");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [reviewHistory, setReviewHistory] = useState<Record<string, ReviewEntry[]>>({});
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const summary = useMemo(() => summarise(findings), [findings]);
-  const visible = useMemo(() => applyFilters(findings, filters), [findings, filters]);
-  const stats = useMemo(() => sourceStats(findings), [findings]);
+  const visible = useMemo(() => applyFilters(findings, filters, results.docs), [findings, filters, results.docs]);
+  const stats = useMemo(() => sourceStats(findings, results), [findings, results]);
   const selected = findings.find((f) => f.id === selectedId) ?? null;
 
-  const sourceCount = new Set(DOCS.map((d) => d.source)).size;
+  const sourceCount = new Set(results.docs.map((d) => d.source)).size;
 
-  const decide = useCallback((id: string, status: FindingStatus, note?: string) => {
-    setFindings((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
-    if (status !== "open" && note) {
-      const entry: ReviewEntry = {
-        status,
-        note,
-        reviewedAt: new Date().toLocaleString(),
-      };
-      setReviewHistory((history) => ({
-        ...history,
-        [id]: [...(history[id] ?? []), entry],
-      }));
-    }
-    if (status !== "open") setSelectedId(null);
+  const flash = useCallback((message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 4000);
   }, []);
+
+  /** Records the decision in the ledger; confirming a supersession also issues recall notices. */
+  const decide = useCallback(
+    async (id: string, status: FindingStatus, note?: string) => {
+      if (status === "open" || !note) return;
+      setBusy(true);
+      try {
+        const r = await postJson<{ recallsIssued: number }>(`/api/findings/${encodeURIComponent(id)}`, { status, note });
+        setDecided((prev) => ({ ...prev, [id]: status }));
+        setSelectedId(null);
+        flash(r.recallsIssued ? `Decision recorded. ${r.recallsIssued} recall notice${r.recallsIssued > 1 ? "s" : ""} sent to staff.` : "Decision recorded in the ledger.");
+        await refresh();
+      } catch (e) {
+        flash(e instanceof Error ? e.message : "Could not record the decision.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [flash, refresh],
+  );
+
+  const act = useCallback(
+    async (action: NonNullable<Finding["actions"]>[number], note: string) => {
+      setBusy(true);
+      try {
+        for (const documentId of action.documentIds) await postJson("/api/scope", { documentId, reason: note });
+        setSelectedId(null);
+        flash(`${action.documentIds.join(" and ")} added to the assistant's scope.`);
+        await refresh();
+      } catch (e) {
+        flash(e instanceof Error ? e.message : "Could not change the scope.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [flash, refresh],
+  );
   const closeFinding = useCallback(() => setSelectedId(null), []);
 
   const tab = view === "sources" ? "sources" : filters.type;
@@ -234,14 +271,18 @@ export function ResultsView({ reviewMode = false }: { reviewMode?: boolean }) {
 
         </div>
 
-        <p className="pt-10 text-center text-[12px] text-faint">{reviewMode ? "Sample review queue. Decisions last for this visit and reset when you leave or reload." : "Showing sample data. Real findings appear once scanning is connected."}</p>
+        <p className="pt-10 text-center text-[12px] text-faint" aria-live="polite">
+          {notice || (loaded ? "Live from the register. Updates as records arrive and decisions are made." : "Loading the register…")}
+        </p>
       </main>
 
       <FindingDrawer
         finding={selected}
         onClose={closeFinding}
         onDecide={decide}
-        reviewHistory={selected ? reviewHistory[selected.id] ?? [] : []}
+        onAction={act}
+        busy={busy}
+        reviewHistory={selected?.history ?? []}
       />
     </div>
   );

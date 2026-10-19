@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUpRight, Check, FileText, RotateCcw, X } from "lucide-react";
+import { ArrowUpRight, Check, FileText, X } from "lucide-react";
 import { TypeBadge } from "@/components/type-badge";
 import { Highlight } from "@/components/results/highlight";
 import { StatusPill } from "@/components/results/status-pill";
-import { CLAIMS, KIND_LABEL, type Finding, type FindingStatus } from "@/lib/results-data";
-import { docById } from "@/lib/results-derive";
+import { KIND_LABEL, type FindingStatus } from "@/lib/results-data";
+import { docById as docIn } from "@/lib/results-derive";
+import type { Finding } from "@/lib/findings";
+import { useLive } from "@/components/live-provider";
 
 export interface ReviewEntry {
   status: "confirmed" | "dismissed";
@@ -20,13 +22,20 @@ export function FindingDrawer({
   finding,
   onClose,
   onDecide,
+  onAction,
   reviewHistory = [],
+  busy = false,
 }: {
   finding: Finding | null;
   onClose: () => void;
   onDecide: (id: string, status: FindingStatus, note?: string) => void;
+  onAction?: (action: NonNullable<Finding["actions"]>[number], note: string) => void;
   reviewHistory?: ReviewEntry[];
+  busy?: boolean;
 }) {
+  const { results } = useLive();
+  const CLAIMS = results.claims;
+  const docById = (id: string) => docIn(results.docs, id);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [noteError, setNoteError] = useState(false);
@@ -255,10 +264,21 @@ export function FindingDrawer({
                     {noteError && <span id="review-note-error" className="mt-1 block text-[11px] text-danger">Add a note to record this decision.</span>}
                   </label>
                   <div className="flex gap-2 sm:pb-px">
+                    {finding.actions?.map((a) => (
+                      <button
+                        key={a.label}
+                        type="button"
+                        onClick={() => (reviewNote.trim() ? onAction?.(a, reviewNote.trim()) : setNoteError(true))}
+                        disabled={busy || !reviewNote.trim()}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
+                      >
+                        {a.label}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => decide("confirmed")}
-                      disabled={!reviewNote.trim()}
+                      disabled={busy || !reviewNote.trim()}
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-2.5 text-[13px] font-semibold text-success transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
                     >
                       <Check className="size-4" /> Approve
@@ -266,7 +286,7 @@ export function FindingDrawer({
                     <button
                       type="button"
                       onClick={() => decide("dismissed")}
-                      disabled={!reviewNote.trim()}
+                      disabled={busy || !reviewNote.trim()}
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-line-strong bg-subtle px-4 py-2.5 text-[13px] font-semibold text-muted transition hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
                     >
                       Reject
@@ -275,18 +295,12 @@ export function FindingDrawer({
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-[12px] text-muted">Decision recorded. The information manager has final authority.</p>
+                  <p className="text-[12px] text-muted">Decision recorded in the ledger. The information manager has final authority.</p>
                   <div className="flex items-center gap-4">
                     <Link href="/review" className="inline-flex items-center gap-1 text-[12px] text-muted transition hover:text-fg">
                       Review queue <ArrowUpRight className="size-3.5" />
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => onDecide(finding.id, "open")}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-2 text-[12px] transition hover:bg-hover"
-                    >
-                      <RotateCcw className="size-3.5" /> Reopen
-                    </button>
+
                   </div>
                 </div>
               )}

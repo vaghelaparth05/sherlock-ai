@@ -8,7 +8,7 @@ import { actorOf } from "@/lib/session";
  * Live updates as Server-Sent Events: every new ledger entry, as it is written.
  * The information manager sees everything. A contributor sees decisions on their own
  * submissions and recall notices addressed to them, without scores or payloads.
- * Resumes from Last-Event-ID (or ?after=); sends `event: reset` if the register was re-seeded.
+ * Resumes from Last-Event-ID (or ?after=<seq>, or ?after=now); sends `event: reset` if the register was re-seeded.
  */
 export async function GET(request: NextRequest) {
   await connection();
@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
   }
   const manager = user.role === "information_manager";
   const me = actorOf(user);
-  let last = Number(request.headers.get("last-event-id") ?? request.nextUrl.searchParams.get("after") ?? 0) || 0;
+  const after = request.headers.get("last-event-id") ?? request.nextUrl.searchParams.get("after");
+  // ?after=now starts from the latest entry instead of replaying the ledger.
+  let last = after === "now" ? ((db().prepare("SELECT MAX(seq) AS m FROM ledger").get() as { m: number | null }).m ?? 0) : Number(after ?? 0) || 0;
   const encoder = new TextEncoder();
   let timer: ReturnType<typeof setInterval> | undefined;
   let closed = false;

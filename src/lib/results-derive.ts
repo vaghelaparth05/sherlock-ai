@@ -1,6 +1,4 @@
 import {
-  CLAIMS,
-  DOCS,
   type Claim,
   type Finding,
   type FindingStatus,
@@ -13,8 +11,14 @@ export const TYPES: FindingType[] = ["misinformation", "bias", "disinformation"]
 export const SEVERITIES: Severity[] = ["high", "medium", "low"];
 const SEVERITY_RANK: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
 
-export function docById(id: string): SourceDoc | undefined {
-  return DOCS.find((d) => d.id === id);
+/** The documents and claims behind a set of findings (live from /api/findings). */
+export interface Dataset {
+  docs: SourceDoc[];
+  claims: Claim[];
+}
+
+export function docById(docs: SourceDoc[], id: string): SourceDoc | undefined {
+  return docs.find((d) => d.id === id);
 }
 
 export function summarise(findings: Finding[]) {
@@ -42,7 +46,7 @@ export interface Filters {
   sort: "severity" | "confidence" | "documents";
 }
 
-export function applyFilters(findings: Finding[], f: Filters): Finding[] {
+export function applyFilters<T extends Finding>(findings: T[], f: Filters, docs: SourceDoc[]): T[] {
   const q = f.query.trim().toLowerCase();
   const out = findings.filter((x) => {
     if (f.type !== "all" && x.type !== f.type) return false;
@@ -54,8 +58,8 @@ export function applyFilters(findings: Finding[], f: Filters): Finding[] {
         x.title,
         x.summary,
         ...x.evidence.map((e) => e.quote),
-        ...x.docIds.map((id) => docById(id)?.title ?? ""),
-        ...x.docIds.map((id) => docById(id)?.source ?? ""),
+        ...x.docIds.map((id) => docById(docs, id)?.title ?? ""),
+        ...x.docIds.map((id) => docById(docs, id)?.source ?? ""),
       ]
         .join(" ")
         .toLowerCase();
@@ -70,8 +74,8 @@ export function applyFilters(findings: Finding[], f: Filters): Finding[] {
   });
 }
 
-export function sourceNamesOf(f: Finding): string[] {
-  return [...new Set(f.docIds.map((id) => docById(id)?.source).filter((s): s is string => !!s))];
+export function sourceNamesOf(f: Finding, docs: SourceDoc[]): string[] {
+  return [...new Set(f.docIds.map((id) => docById(docs, id)?.source).filter((s): s is string => !!s))];
 }
 
 export const slugOf = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -90,14 +94,14 @@ export interface SourceStat {
   verdict: "reliable" | "attention" | "echo";
 }
 
-export function sourceStats(findings: Finding[]): SourceStat[] {
-  const names = [...new Set(DOCS.map((d) => d.source))];
+export function sourceStats(findings: Finding[], { docs, claims }: Dataset): SourceStat[] {
+  const names = [...new Set(docs.map((d) => d.source))];
   return names
     .map((name) => {
-      const documents = DOCS.filter((d) => d.source === name);
+      const documents = docs.filter((d) => d.source === name);
       const docIds = new Set(documents.map((d) => d.id));
-      const own = CLAIMS.filter((c) => docById(c.origin)?.source === name);
-      const repeats = CLAIMS.filter((c) => docById(c.origin)?.source !== name && c.citedBy.some((id) => docIds.has(id)));
+      const own = claims.filter((c) => docById(docs, c.origin)?.source === name);
+      const repeats = claims.filter((c) => docById(docs, c.origin)?.source !== name && c.citedBy.some((id) => docIds.has(id)));
       const buckets = { good: 0, single: 0, review: 0, superseded: 0 };
       for (const c of own) {
         if (c.status === "corroborated" || c.status === "current") buckets.good++;
@@ -132,8 +136,8 @@ export function sourceStats(findings: Finding[]): SourceStat[] {
     });
 }
 
-export function sourceSlugs(): string[] {
-  return [...new Set(DOCS.map((d) => d.source))].map(slugOf);
+export function sourceSlugs(docs: SourceDoc[]): string[] {
+  return [...new Set(docs.map((d) => d.source))].map(slugOf);
 }
 
 export interface SourceDetail {
@@ -144,11 +148,11 @@ export interface SourceDetail {
   related: Finding[];
 }
 
-export function sourceDetail(findings: Finding[], slug: string): SourceDetail | null {
-  const stat = sourceStats(findings).find((s) => s.slug === slug);
+export function sourceDetail(findings: Finding[], data: Dataset, slug: string): SourceDetail | null {
+  const stat = sourceStats(findings, data).find((s) => s.slug === slug);
   if (!stat) return null;
 
-  const allYears = DOCS.map((d) => d.year);
+  const allYears = data.docs.map((d) => d.year);
   const first = Math.min(...allYears);
   const last = Math.max(...allYears);
   const activity = Array.from({ length: last - first + 1 }, (_, i) => {
@@ -156,7 +160,7 @@ export function sourceDetail(findings: Finding[], slug: string): SourceDetail | 
     return {
       year,
       documents: stat.documents.filter((d) => d.year === year).length,
-      claims: stat.own.filter((c) => docById(c.origin)?.year === year).length,
+      claims: stat.own.filter((c) => docById(data.docs, c.origin)?.year === year).length,
     };
   });
   const most = Math.max(...activity.map((a) => a.documents));
@@ -166,7 +170,7 @@ export function sourceDetail(findings: Finding[], slug: string): SourceDetail | 
     stat,
     activity,
     peakYears: most > 0 ? activity.filter((a) => a.documents === most).map((a) => a.year) : [],
-    repeatsFrom: stat.repeats.map((claim) => ({ claim, origin: docById(claim.origin) })),
+    repeatsFrom: stat.repeats.map((claim) => ({ claim, origin: docById(data.docs, claim.origin) })),
     related: findings.filter((f) => f.docIds.some((id) => docIds.has(id))),
   };
 }

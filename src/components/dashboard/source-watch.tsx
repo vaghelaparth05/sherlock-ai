@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { SOURCE_WATCH } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 const SEGMENTS = [
   { key: "corroborated", label: "Corroborated", color: "var(--success)" },
@@ -11,6 +11,7 @@ const SEGMENTS = [
 ] as const;
 
 export function SourceWatch() {
+  const SOURCE_WATCH = useDashboard().sourceWatch;
   return (
     <div>
       <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">

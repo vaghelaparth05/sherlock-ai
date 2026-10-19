@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { LAST_INVESTIGATION as L } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 export function ContinueCard() {
+  const L = useDashboard().lastInvestigation;
   const openTotal = Object.values(L.open).reduce((total, count) => total + count, 0);
 
   return (

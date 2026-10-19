@@ -2,9 +2,10 @@
 
 import { motion } from "motion/react";
 import { AnimatedNumber } from "@/components/animated-number";
-import { KPIS } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 export function StatCards() {
+  const KPIS = useDashboard().kpis;
   return (
     <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-subtle lg:grid-cols-4">
       {KPIS.map((k, i) => (

@@ -1,11 +1,27 @@
 import { taxonomy } from "./config.ts";
-import { allEntries, type LedgerEntry } from "./ledger.ts";
-import { groupKey } from "./relate.ts";
-import { registerRows, snapshot } from "./register.ts";
+import { allEntries, append, type LedgerEntry } from "./ledger.ts";
+import { decide, groupKey } from "./relate.ts";
+import { registerRows, rescoreAll, snapshot } from "./register.ts";
 import { biasBySubject } from "./bias.ts";
-import { recallNotices } from "./impact.ts";
+import { issueRecalls, recallNotices } from "./impact.ts";
 import type { ClaimRow } from "./extract.ts";
-import type { Claim, Evidence, Finding, FindingType, Severity, SourceDoc } from "./results-data.ts";
+import type { Claim, Evidence, Finding as UiFinding, FindingType, Severity, SourceDoc } from "./results-data.ts";
+
+export interface ReviewEntry {
+  status: "confirmed" | "dismissed";
+  note: string;
+  reviewedAt: string;
+  actor: string;
+}
+
+/** A finding as the Results screen renders it, plus what the backend needs to act on it. */
+export type Finding = UiFinding & {
+  /** Relationships a decision on this finding confirms or dismisses. */
+  relationshipIds?: string[];
+  /** One-click remedies, e.g. adding the out-of-scope records behind a bias gap. */
+  actions?: { kind: "scope_add"; documentIds: string[]; label: string }[];
+  history?: ReviewEntry[];
+};
 
 /**
  * The live register in the shapes the Results, Sources and Dashboard screens already use
@@ -90,6 +106,7 @@ export function results() {
         evidence: evidence(to, from, "Older", "Newer"),
         docIds: staleDocs,
         claimIds: [to.id, from.id],
+        relationshipIds: [rel.id],
       });
     } else if (type === "different_scope") {
       findings.push({
@@ -104,6 +121,7 @@ export function results() {
         evidence: evidence(from, to, "Newer", "Older"),
         docIds: [from.document_id, to.document_id],
         claimIds: [from.id, to.id],
+        relationshipIds: [rel.id],
       });
     } else {
       for (const c of [from, to]) {
@@ -138,6 +156,7 @@ export function results() {
       ],
       docIds: [d.id, ...declaredDocs],
       claimIds: [claim.id, ...by.map((b) => b.id)],
+      relationshipIds: rels.map((r) => r.id),
     });
   }
 
@@ -188,7 +207,8 @@ export function results() {
   const scoped = new Set(allEntries().filter((e) => e.action === "SCOPE_ADD" || e.action === "APPROVE").map((e) => e.target_id));
   for (const b of biasBySubject()) {
     const touched = snap.claims.some((c) => c.subject === b.subject && scoped.has(c.document_id));
-    if (b.rating === "Low" && !touched) continue;
+    // A Low subject is only worth showing when a scope change is what brought in a second region.
+    if (b.rating === "Low" && !(touched && b.shares.length > 1)) continue;
     if (b.rating === "Medium" && !b.gaps.length) continue; // concentration alone: listed in /api/bias, not as a finding
     const gapDocs = b.gaps.flatMap((g) => g.documents);
     const sample = snap.claims.find((c) => c.subject === b.subject && gapDocs.includes(c.document_id)) ?? snap.claims.find((c) => c.subject === b.subject);
@@ -204,6 +224,7 @@ export function results() {
       evidence: sample ? [{ label: gapDocs.includes(sample.document_id) ? "Outside AI scope" : "In scope", docId: sample.document_id, quote: highlight(sample.quote) }] : [],
       docIds: gapDocs.length ? gapDocs : docIdsOf(snap.claims.filter((c) => c.subject === b.subject)),
       claimIds: sample ? [sample.id] : [],
+      actions: gapDocs.length ? [{ kind: "scope_add", documentIds: gapDocs, label: `Add ${gapDocs.join(" and ")} to the assistant's scope` }] : [],
     });
   }
 
@@ -228,6 +249,17 @@ export function results() {
       docIds: [r.id],
       claimIds: snap.claims.filter((c) => c.document_id === r.id).map((c) => c.id),
     });
+  }
+
+  // Decisions recorded against a finding itself (those with no relationship behind them).
+  const entries = allEntries();
+  for (const f of findings) {
+    const targets = new Set([f.id, ...(f.relationshipIds ?? [])]);
+    f.history = entries
+      .filter((e) => targets.has(e.target_id) && (e.action === "CONFIRM" || e.action === "DISMISS"))
+      .map((e) => ({ status: e.action === "CONFIRM" ? "confirmed" : "dismissed", note: e.reason ?? "", reviewedAt: sydney(e.ts_utc), actor: e.actor }));
+    const own = entries.filter((e) => e.target_type === "finding" && e.target_id === f.id).at(-1);
+    if (own) f.status = own.action === "CONFIRM" ? "confirmed" : "dismissed";
   }
 
   const lastScore = registerRows().length ? allEntries().at(-1)?.ts_utc : undefined;
@@ -269,7 +301,18 @@ function activityText(e: LedgerEntry): string {
   }
 }
 
-/** Dashboard numbers in the shapes of mock-dashboard.ts. Trends are flat until there is history. */
+const RAISED = new Set(["PROPOSE_RELATIONSHIP", "TAMPER_DETECTED"]);
+const RESOLVED = new Set(["CONFIRM", "DISMISS", "CHANGE_RELATIONSHIP", "REJECT"]);
+
+/** Findings raised versus decisions made per day (Australia/Sydney) over the last 8 days, from the ledger. */
+function trend(entries: LedgerEntry[]) {
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+  const days = Array.from({ length: 8 }, (_, i) => day(new Date(Date.now() - (7 - i) * 86_400_000)));
+  const count = (set: Set<string>) => days.map((d) => entries.filter((e) => set.has(e.action) && day(new Date(e.ts_utc)) === d).length);
+  return { labels: days.map((_, i) => (i === 7 ? "Today" : `-${7 - i}d`)), found: count(RAISED), resolved: count(RESOLVED) };
+}
+
+/** Dashboard numbers in the shapes of mock-dashboard.ts, from the live register and ledger. */
 export function dashboard() {
   const { findings, docs } = results();
   const rows = registerRows();
@@ -282,7 +325,7 @@ export function dashboard() {
   const agreed = [...latest.values()].filter((e) => e.action === "CONFIRM").length;
   const agreement = latest.size ? Math.round((agreed / latest.size) * 100) : 100;
   const flat = (n: number) => Array(8).fill(n);
-  const next = [...open].sort((a, b) => ({ high: 0, medium: 1, low: 2 })[a.severity] - ({ high: 0, medium: 1, low: 2 })[b.severity] || b.confidence - a.confidence)[0];
+  const next: Finding | undefined = [...open].sort((a, b) => ({ high: 0, medium: 1, low: 2 })[a.severity] - ({ high: 0, medium: 1, low: 2 })[b.severity] || b.confidence - a.confidence)[0];
   const evidenceFrom = (e?: Evidence) => e && { text: e.quote.replace(/\[\[|\]\]/g, ""), from: docs.find((d) => d.id === e.docId)?.title ?? "" };
   const units = new Set(rows.map((r) => r.unit));
   const entries = allEntries();
@@ -297,7 +340,7 @@ export function dashboard() {
       reviewed: findings.length - open.length,
       total: findings.length,
       open: byType(open),
-      next: next && { type: next.type, title: next.title, summary: next.summary, confidence: next.confidence, documents: next.docIds.length, older: evidenceFrom(next.evidence[0]), newer: evidenceFrom(next.evidence[1]) },
+      next: next ? { type: next.type, title: next.title, summary: next.summary, confidence: next.confidence, documents: next.docIds.length, older: evidenceFrom(next.evidence[0]), newer: evidenceFrom(next.evidence[1]) } : null,
     },
     kpis: [
       { label: "Open findings", value: open.length, delta: `${findings.length - open.length} resolved`, good: true, spark: flat(open.length) },
@@ -307,6 +350,18 @@ export function dashboard() {
     ],
     openByType: byType(open),
     recalls: recallNotices().length,
+    investigations: [
+      {
+        id: "riverbend-flood-recovery-grant",
+        name: COLLECTION_NAME,
+        documents: rows.length,
+        status: (open.length ? "needs-review" : "resolved") as "needs-review" | "scanning" | "resolved",
+        progress: findings.length ? (findings.length - open.length) / findings.length : 1,
+        open: open.length,
+        lastActive: entries.at(-1) ? sydney(entries.at(-1)!.ts_utc) : "Never",
+      },
+    ],
+    trend: trend(entries),
     activity: entries
       .filter((e) => !["EXTRACT_REJECTED"].includes(e.action))
       .slice(-12)
@@ -325,4 +380,27 @@ export function dashboard() {
       return { name: unit === "unknown" ? "Unknown source" : unit, note, corroborated, review, superseded, single };
     }),
   };
+}
+
+export class FindingError extends Error {}
+
+/**
+ * The Results drawer's decision. A finding backed by relationships confirms or dismisses them
+ * (confirming issues recall notices); any other finding records the decision against itself.
+ */
+export function decideFinding(id: string, status: "confirmed" | "dismissed", note: string, actor: string) {
+  const finding = results().findings.find((f) => f.id === id);
+  if (!finding) throw new FindingError(`No finding ${id}.`);
+  if (finding.status !== "open") throw new FindingError(`${id} is already ${finding.status}.`);
+  let recalls = 0;
+  if (finding.relationshipIds?.length) {
+    for (const rel of finding.relationshipIds) {
+      decide(rel, status === "confirmed" ? "confirm" : "dismiss", actor, note);
+      rescoreAll();
+      if (status === "confirmed") recalls += issueRecalls(rel, actor).length;
+    }
+  } else {
+    append({ actor, action: status === "confirmed" ? "CONFIRM" : "DISMISS", targetType: "finding", targetId: id, payload: { title: finding.title, type: finding.type }, reason: note });
+  }
+  return { finding: results().findings.find((f) => f.id === id) ?? null, recallsIssued: recalls };
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { MotionProvider } from "@/components/motion-provider";
+import { LiveProvider } from "@/components/live-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full bg-bg text-fg">
-        <MotionProvider>{children}</MotionProvider>
+        <MotionProvider>
+          <LiveProvider>{children}</LiveProvider>
+        </MotionProvider>
       </body>
     </html>
   );

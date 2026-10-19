@@ -11,6 +11,8 @@ import { FileRow } from "@/components/file-row";
 import { DatabasePanel } from "@/components/database-panel";
 import { SummaryPanel } from "@/components/summary-panel";
 import { SAMPLE_COLLECTION, type ImportItem } from "@/lib/format";
+import { postJson, useLive, useRequireUser } from "@/components/live-provider";
+import { EMPTY_PROVENANCE, ProvenanceFields, type Provenance } from "@/components/provenance-fields";
 
 const TABS = [
   { id: "upload", label: "Upload files" },
@@ -76,6 +78,8 @@ function createQueue(limit: number) {
 }
 
 export function ImportView() {
+  useRequireUser("information_manager");
+  const { refresh } = useLive();
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("upload");
   const [items, setItems] = useState<ImportItem[]>([]);
@@ -86,19 +90,40 @@ export function ImportView() {
   const [enqueue] = useState(() => createQueue(4));
   const files = useRef(new Map<string, File>());
   const collectionRef = useRef(collection);
-  const startInvestigation = useCallback(() => {
+  const [provenance, setProvenance] = useState<Provenance>(EMPTY_PROVENANCE);
+  const [scanning, setScanning] = useState(false);
+  /** Runs the real scan: the sample set resets the register; uploads are ingested with the batch provenance. */
+  const startInvestigation = useCallback(async () => {
     const ready = items.filter((item) => item.status === "ready");
-    if (!ready.length) return;
-    try {
-      sessionStorage.setItem("sherlock-investigation", JSON.stringify({
-        collection: collection.trim() || "Untitled collection",
-        documents: ready,
-      }));
-      router.push("/scan");
-    } catch {
-      setNotice("Could not open the investigation. Allow browser storage and try again.");
+    if (!ready.length || scanning) return;
+    const uploads = ready.filter((i) => i.origin === "upload").map((i) => i.id);
+    const sample = ready.some((i) => i.origin === "sample");
+    const needsProvenance = ready.some((i) => i.origin === "upload" && i.ext !== "md");
+    if (needsProvenance && !provenance.function) {
+      setNotice("Choose the business function for these files before scanning.");
+      return;
     }
-  }, [items, collection, router]);
+    setScanning(true);
+    setNotice(`Scanning ${ready.length} document${ready.length > 1 ? "s" : ""}: hashing, reading claims, checking provenance…`);
+    try {
+      if (sample) await postJson("/api/scan", { mode: "sample" });
+      if (uploads.length) {
+        const r = await postJson<{ failed: { file: string; error: string }[] }>("/api/scan", {
+          mode: "staged",
+          documentIds: uploads,
+          provenance: { ...provenance, function: provenance.function || undefined, custody: provenance.custody.split(",") },
+        });
+        if (r.failed.length) setNotice(`${r.failed.length} file${r.failed.length > 1 ? "s" : ""} could not be scanned: ${r.failed.map((f) => `${f.file} (${f.error})`).join("; ")}`);
+      }
+      sessionStorage.setItem("sherlock-investigation", JSON.stringify({ collection: collection.trim() || "Untitled collection", documents: ready }));
+      await refresh();
+      router.push("/scan");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "The scan failed.");
+    } finally {
+      setScanning(false);
+    }
+  }, [items, collection, router, provenance, scanning, refresh]);
 
   useEffect(() => {
     if (!navigateAfterUpload || !items.length || items.some((item) => item.status !== "ready")) return;
@@ -305,7 +330,18 @@ export function ImportView() {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.18 }}
               >
-                {tab === "upload" && <Dropzone onFiles={addFiles} />}
+                {tab === "upload" && (
+                  <>
+                    <Dropzone onFiles={addFiles} />
+                    {items.some((i) => i.origin === "upload") && (
+                      <div className="mt-4 rounded-xl border border-line bg-subtle p-4">
+                        <p className="mb-3 text-[13px] font-medium">Provenance for these files</p>
+                        <ProvenanceFields value={provenance} onChange={setProvenance} />
+                        <p className="mt-2 text-[11.5px] text-faint">Markdown records with front matter use their own provenance.</p>
+                      </div>
+                    )}
+                  </>
+                )}
                 {tab === "database" && (
                   <DatabasePanel
                     onImport={(rows) => {

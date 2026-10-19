@@ -11,7 +11,8 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { TypeBadge } from "@/components/type-badge";
 import { ClaimStatusPill, StatusPill } from "@/components/results/status-pill";
 import { RECORD_SEGMENTS, RecordBar, VERDICT } from "@/components/results/source-list";
-import { docById, type SourceDetail } from "@/lib/results-derive";
+import { docById as docIn, type SourceDetail } from "@/lib/results-derive";
+import { useLive } from "@/components/live-provider";
 
 const EXPLAIN: Record<(typeof RECORD_SEGMENTS)[number]["key"], string> = {
   good: "Corroborated by an independent source, or the current position",
@@ -21,6 +22,8 @@ const EXPLAIN: Record<(typeof RECORD_SEGMENTS)[number]["key"], string> = {
 };
 
 export function SourceDetailView({ detail }: { detail: SourceDetail }) {
+  const { results } = useLive();
+  const docById = (id: string) => docIn(results.docs, id);
   const { stat, activity, peakYears, repeatsFrom, related } = detail;
   const v = VERDICT[stat.verdict];
   const maxDocs = Math.max(1, ...activity.map((a) => a.documents));

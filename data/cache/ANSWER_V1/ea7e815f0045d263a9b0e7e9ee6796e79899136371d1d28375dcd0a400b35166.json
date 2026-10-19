@@ -1,0 +1,23 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "ANSWER_V1",
+  "request_sha256": "ea7e815f0045d263a9b0e7e9ee6796e79899136371d1d28375dcd0a400b35166",
+  "created_at": "2026-10-19T02:55:34.759Z",
+  "output": {
+    "sentences": [
+      {
+        "text": "Yes, but only for the $2,000 contents tier; renters may apply for the contents tier only, as building repairs remain the owner's responsibility.",
+        "claim_ids": [
+          "D21-C02",
+          "D21-C04"
+        ]
+      },
+      {
+        "text": "Renters who were told before 3 August 2026 that they could not apply may now lodge an application under the current guidelines.",
+        "claim_ids": [
+          "D21-C10"
+        ]
+      }
+    ]
+  }
+}

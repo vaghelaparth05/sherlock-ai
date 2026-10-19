@@ -150,7 +150,7 @@ export interface Capture {
   /** The original, written once, relative to the repo root. */
   sourcePath: string;
   ext: string;
-  /** Provenance captured at upload. Front matter in a Markdown record fills anything left out. */
+  /** Provenance captured at upload. Front matter in a Markdown record wins over it. */
   meta: Record<string, unknown>;
   actor: string;
   /** Contributor uploads wait for the information manager before the AI may read them. */
@@ -177,7 +177,8 @@ export async function captureFile(c: Capture): Promise<DocumentRow> {
     ({ text: body, method } = c.rendition);
   } else if (c.ext === "md" && /^---\r?\n/.test(raw)) {
     const record = parseRecord(raw);
-    meta = { ...record.meta, ...meta };
+    // A record's own front matter wins; form or batch provenance only fills what it leaves out.
+    meta = { ...meta, ...record.meta };
     body = record.body;
     method = "markdown record";
   } else {

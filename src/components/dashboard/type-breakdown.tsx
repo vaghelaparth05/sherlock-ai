@@ -5,11 +5,13 @@ import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
-import { OPEN_BY_TYPE, TYPE_META, type FindingType } from "@/lib/mock-dashboard";
+import { TYPE_META, type FindingType } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 const ORDER: FindingType[] = ["misinformation", "bias", "disinformation"];
 
 export function TypeBreakdown() {
+  const OPEN_BY_TYPE = useDashboard().openByType;
   const total = ORDER.reduce((n, t) => n + OPEN_BY_TYPE[t], 0);
 
   return (
@@ -20,7 +22,7 @@ export function TypeBreakdown() {
             key={t}
             style={{ background: TYPE_META[t].color }}
             initial={{ width: 0 }}
-            animate={{ width: `${(OPEN_BY_TYPE[t] / total) * 100}%` }}
+            animate={{ width: `${total ? (OPEN_BY_TYPE[t] / total) * 100 : 0}%` }}
             transition={{ duration: 0.9, delay: 0.3 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
             className={i > 0 ? "border-l border-bg" : ""}
           />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLive } from "@/components/live-provider";
 
 interface Account {
   id: string;
@@ -13,6 +14,7 @@ interface Account {
 /** Demo sign-in: pick an account. In a real deployment this is the agency's own sign-in. */
 export function SignIn() {
   const router = useRouter();
+  const { reloadSession } = useLive();
   const [users, setUsers] = useState<Account[]>([]);
   const [current, setCurrent] = useState<Account | null>(null);
   const [error, setError] = useState("");
@@ -30,7 +32,10 @@ export function SignIn() {
   async function signIn(u: Account) {
     const res = await fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: u.id }) });
     if (!res.ok) return setError("Could not sign in.");
-    router.push(u.role === "information_manager" ? "/dashboard" : "/import");
+    await reloadSession();
+    const next = new URLSearchParams(window.location.search).get("next");
+    const home = u.role === "information_manager" ? "/dashboard" : "/submit";
+    router.push(next && next.startsWith("/") && (u.role === "information_manager" || ["/submit", "/assistant"].includes(next)) ? next : home);
   }
 
   return (

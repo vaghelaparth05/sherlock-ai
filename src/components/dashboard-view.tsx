@@ -12,8 +12,10 @@ import { TypeBreakdown } from "@/components/dashboard/type-breakdown";
 import { InvestigationsTable } from "@/components/dashboard/investigations-table";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { SourceWatch } from "@/components/dashboard/source-watch";
+import { useRequireUser } from "@/components/live-provider";
 
 export function DashboardView() {
+  useRequireUser("information_manager");
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[380px]" aria-hidden />
@@ -64,7 +66,7 @@ export function DashboardView() {
         </Panel>
 
         <p className="pt-2 text-center text-[12px] text-faint">
-          Showing sample data. Real numbers appear once scanning and results are connected.
+          Live from the register. Numbers update as records arrive and decisions are made.
         </p>
       </main>
     </div>

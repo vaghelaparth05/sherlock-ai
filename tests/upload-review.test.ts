@@ -153,3 +153,14 @@ test("the SQLite connector lists tables and turns rows into records; other sourc
   assert.throws(() => listTables("sqlite://data/sherlock.db"), ConnectorError);
   assert.throws(() => listTables("sqlite:///etc/hosts"), ConnectorError);
 });
+
+test("a record's own front matter wins over batch provenance", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "sherlock-fm-"));
+  const file = path.join(dir, "record.md");
+  writeFileSync(file, "---\nid: T99\ntitle: Test record\nunit: Finance\nfunction: grant_payments\ncustody: [records_system]\nrecord_status: declared\ndate: 2026-08-01\nin_ai_scope: true\n---\n\nNo fee is charged to apply.\n");
+  const row = await captureFile({
+    sourcePath: file, ext: "md", actor: "Priya (information manager)", reviewRequired: false,
+    meta: { title: "batch title", unit: "unknown", custody: ["team_site"], record_status: "final", date: "2026-10-19" },
+  });
+  assert.deepEqual([row.title, row.unit, row.custody, row.record_status, row.date], ["Test record", "Finance", '["records_system"]', "declared", "2026-08-01"]);
+});

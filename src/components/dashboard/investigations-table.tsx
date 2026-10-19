@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, CircleCheck, LoaderCircle, MessageSquareWarning } from "lucide-react";
-import { INVESTIGATIONS, type InvestigationStatus } from "@/lib/mock-dashboard";
+import type { InvestigationStatus } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 const STATUS: Record<InvestigationStatus, { label: string; color: string; href: string; cta: string }> = {
   "needs-review": { label: "Needs review", color: "var(--warning)", href: "/review", cta: "Resume" },
@@ -19,6 +20,7 @@ function StatusIcon({ status }: { status: InvestigationStatus }) {
 }
 
 export function InvestigationsTable() {
+  const INVESTIGATIONS = useDashboard().investigations;
   return (
     <ul className="divide-y divide-line">
       {INVESTIGATIONS.map((inv, i) => {

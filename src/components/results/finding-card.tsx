@@ -7,10 +7,12 @@ import { StatusPill, SeverityDot } from "@/components/results/status-pill";
 import { TYPE_META } from "@/lib/mock-dashboard";
 import { KIND_LABEL, type Finding } from "@/lib/results-data";
 import { sourceNamesOf } from "@/lib/results-derive";
+import { useLive } from "@/components/live-provider";
 
 export function FindingCard({ finding, onOpen }: { finding: Finding; onOpen: (id: string) => void }) {
   const m = TYPE_META[finding.type];
-  const sources = sourceNamesOf(finding);
+  const { results } = useLive();
+  const sources = sourceNamesOf(finding, results.docs);
   const resolved = finding.status !== "open";
 
   return (

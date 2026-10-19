@@ -2,9 +2,11 @@
 
 import { motion } from "motion/react";
 import { TypeIcon } from "@/components/type-badge";
-import { ACTIVITY, TYPE_META } from "@/lib/mock-dashboard";
+import { TYPE_META } from "@/lib/mock-dashboard";
+import { useDashboard } from "@/components/live-provider";
 
 export function ActivityFeed() {
+  const ACTIVITY = useDashboard().activity;
   return (
     <ol className="relative space-y-4">
       <span aria-hidden className="absolute bottom-2 left-[13px] top-2 w-px bg-line" />

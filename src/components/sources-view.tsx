@@ -8,14 +8,17 @@ import { Reveal } from "@/components/reveal";
 import { AnimatedNumber } from "@/components/animated-number";
 import { Segmented } from "@/components/results/filter-bar";
 import { SourceList } from "@/components/results/source-list";
-import { COLLECTION, FINDINGS } from "@/lib/results-data";
 import { sourceStats, type SourceStat } from "@/lib/results-derive";
+import { useLive, useRequireUser } from "@/components/live-provider";
 
 type Verdict = SourceStat["verdict"] | "all";
 type Sort = "attention" | "held" | "documents" | "name";
 
 export function SourcesView() {
-  const all = useMemo(() => sourceStats(FINDINGS), []);
+  useRequireUser("information_manager");
+  const { results } = useLive();
+  const COLLECTION = results.collection;
+  const all = useMemo(() => sourceStats(results.findings, results), [results]);
   const [query, setQuery] = useState("");
   const [verdict, setVerdict] = useState<Verdict>("all");
   const [sort, setSort] = useState<Sort>("attention");

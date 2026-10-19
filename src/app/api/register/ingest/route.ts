@@ -11,7 +11,7 @@ import { actorOf } from "@/lib/session";
 /**
  * A record arrives. Multipart `file` plus provenance fields: title, unit (who created it, or
  * "unknown"), function, custody (how it reached us, origin first, comma-separated), record_status,
- * date, review_date, series, version. Markdown front matter fills anything left blank.
+ * date, review_date, series, version. A Markdown record's front matter wins over these.
  * A contributor's upload waits for the information manager; hers counts as approved.
  */
 
