@@ -52,7 +52,7 @@ export function groupOf(ext: string): string {
   return GROUPS[ext] ?? "Other";
 }
 
-export const ACCEPT_ATTR = ".pdf,.docx,.txt,.md,.html,.htm,.eml,.png,.jpg,.jpeg,.tif,.tiff,.heic";
+export const ACCEPT_ATTR = ".pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.eml,.png,.jpg,.jpeg,.tif,.tiff,.heic";
 
 /** Mirrors data/corpus, which `npm run seed` loads into the register. */
 export const SAMPLE_COLLECTION: Omit<ImportItem, "id" | "status" | "progress" | "origin">[] = [

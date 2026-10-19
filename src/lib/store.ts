@@ -12,7 +12,7 @@ import { createHash, randomUUID } from "node:crypto";
 const ROOT = path.join(process.cwd(), "data", "uploads");
 
 /** Formats Sherlock can read text from (see text.ts), plus images that are held for OCR. */
-export const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "txt", "md", "html", "htm", "eml", "png", "jpg", "jpeg", "tif", "tiff", "heic"]);
+export const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "txt", "md", "csv", "json", "html", "htm", "eml", "png", "jpg", "jpeg", "tif", "tiff", "heic"]);
 export const MAX_BYTES = 25 * 1024 * 1024;
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 

@@ -9,7 +9,7 @@ import mammoth from "mammoth";
 export class NeedsOcr extends Error {}
 export class Unsupported extends Error {}
 
-export const TEXT_FORMATS = ["md", "txt", "html", "htm", "eml", "pdf", "docx"] as const;
+export const TEXT_FORMATS = ["md", "txt", "csv", "json", "html", "htm", "eml", "pdf", "docx"] as const;
 export const IMAGE_FORMATS = ["png", "jpg", "jpeg", "tif", "tiff", "heic"] as const;
 export const ACCEPTED_FORMATS: readonly string[] = [...TEXT_FORMATS, ...IMAGE_FORMATS];
 
@@ -87,7 +87,7 @@ export function emailToText(raw: string): string {
 export async function textOf(bytes: Uint8Array, ext: string): Promise<{ text: string; method: string }> {
   const e = ext.toLowerCase();
   if ((IMAGE_FORMATS as readonly string[]).includes(e)) throw new NeedsOcr("Image with no text layer.");
-  if (e === "md" || e === "txt") return { text: tidy(Buffer.from(bytes).toString("utf8")), method: "utf-8 text" };
+  if (e === "md" || e === "txt" || e === "csv" || e === "json") return { text: tidy(Buffer.from(bytes).toString("utf8")), method: `utf-8 text (${e})` };
   if (e === "html" || e === "htm") return { text: htmlToText(Buffer.from(bytes).toString("utf8")), method: "html to text" };
   if (e === "eml") return { text: emailToText(Buffer.from(bytes).toString("utf8")), method: "email body" };
   if (e === "docx") {
@@ -101,5 +101,5 @@ export async function textOf(bytes: Uint8Array, ext: string): Promise<{ text: st
     if (joined.replace(/\s/g, "").length < 20 * totalPages) throw new NeedsOcr("PDF has no text layer.");
     return { text: joined, method: `pdf text layer (${totalPages} page${totalPages > 1 ? "s" : ""})` };
   }
-  throw new Unsupported(`.${e || "unknown"} files are not supported. Use PDF, Word (.docx), HTML, email (.eml), text or Markdown.`);
+  throw new Unsupported(`.${e || "unknown"} files are not supported. Use PDF, Word (.docx), HTML, email (.eml), text, Markdown, CSV or JSON.`);
 }
