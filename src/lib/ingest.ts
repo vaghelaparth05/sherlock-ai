@@ -4,6 +4,7 @@ import { db, transaction } from "./db.ts";
 import { sha256 } from "./hash.ts";
 import { append } from "./ledger.ts";
 import { scoringConfig, taxonomy } from "./config.ts";
+import { NeedsOcr, textOf } from "./text.ts";
 
 /** Reads a record file (Markdown + YAML front matter), hashes the bytes and stores it once. */
 
@@ -45,7 +46,7 @@ export function parseRecord(raw: string): { meta: Record<string, unknown>; body:
 function str(meta: Record<string, unknown>, key: string, required: boolean): string | null {
   const v = meta[key];
   if (v === undefined || v === null || v === "") {
-    if (required) throw new Error(`Front matter is missing "${key}".`);
+    if (required) throw new Error(`Provenance is missing "${key}".`);
     return null;
   }
   if (typeof v !== "string" && typeof v !== "number") throw new Error(`"${key}" must be text.`);
@@ -59,8 +60,8 @@ function list(meta: Record<string, unknown>, key: string): string[] {
   return arr as string[];
 }
 
-/** Validates front matter against the taxonomy and scoring config. Throws on anything unknown. */
-export function toDocumentRow(meta: Record<string, unknown>, body: string, fileHash: string, sourcePath: string) {
+/** Validates provenance metadata against the taxonomy and scoring config. Throws on anything unknown. */
+export function toDocumentRow(meta: Record<string, unknown>, body: string, fileHash: string, sourcePath: string, opts: { allowEmptyBody?: boolean } = {}) {
   const tax = taxonomy();
   const id = str(meta, "id", true)!;
   if (!ID.test(id)) throw new Error(`Invalid document id "${id}".`);
@@ -81,7 +82,7 @@ export function toDocumentRow(meta: Record<string, unknown>, body: string, fileH
   const version = str(meta, "version", false);
   if (version !== null && !/^\d+$/.test(version)) throw new Error("version must be a whole number.");
   if (typeof meta.in_ai_scope !== "boolean") throw new Error('"in_ai_scope" must be true or false.');
-  if (!body) throw new Error("Document body is empty.");
+  if (!body && !opts.allowEmptyBody) throw new Error("Document body is empty.");
 
   const row: DocumentRow = {
     id,
@@ -114,11 +115,7 @@ export function allDocuments(): DocumentRow[] {
   return db().prepare("SELECT * FROM documents ORDER BY id").all() as unknown as DocumentRow[];
 }
 
-/** `sourcePath` is relative to the repo root so the tamper check can re-read it. */
-export function ingestFile(sourcePath: string, actor: string): DocumentRow {
-  const bytes = readFileSync(sourcePath);
-  const { meta, body } = parseRecord(bytes.toString("utf8"));
-  const row = toDocumentRow(meta, body, sha256(bytes), sourcePath);
+function insertDocument(row: DocumentRow, actor: string, payload: Record<string, unknown>): DocumentRow {
   if (getDocument(row.id)) throw new Error(`${row.id} is already ingested. Originals are never replaced.`);
   return transaction(() => {
     const cols = Object.keys(row) as (keyof DocumentRow)[];
@@ -130,8 +127,70 @@ export function ingestFile(sourcePath: string, actor: string): DocumentRow {
       action: "INGEST",
       targetType: "document",
       targetId: row.id,
-      payload: { sha256: row.sha256, source_path: sourcePath, title: row.title },
+      payload: { sha256: row.sha256, source_path: row.source_path, title: row.title, ...payload },
     });
     return row;
   });
+}
+
+/** A Markdown record with front matter, e.g. the seeded corpus. `sourcePath` is relative to the repo root. */
+export function ingestFile(sourcePath: string, actor: string): DocumentRow {
+  const bytes = readFileSync(sourcePath);
+  const { meta, body } = parseRecord(bytes.toString("utf8"));
+  return insertDocument(toDocumentRow(meta, body, sha256(bytes), sourcePath), actor, { text_method: "markdown record", text_layer: true, review_required: false });
+}
+
+/** Ids for records that arrive without one: U01, U02, ... */
+export function nextDocumentId(): string {
+  const n = allDocuments().reduce((max, d) => Math.max(max, Number(d.id.match(/^U(\d+)$/)?.[1] ?? 0)), 0);
+  return `U${String(n + 1).padStart(2, "0")}`;
+}
+
+export interface Capture {
+  /** The original, written once, relative to the repo root. */
+  sourcePath: string;
+  ext: string;
+  /** Provenance captured at upload. Front matter in a Markdown record fills anything left out. */
+  meta: Record<string, unknown>;
+  actor: string;
+  /** Contributor uploads wait for the information manager before the AI may read them. */
+  reviewRequired: boolean;
+  payload?: Record<string, unknown>;
+  /** A text rendition made by the caller (e.g. a database row), instead of reading the file. */
+  rendition?: { text: string; method: string };
+}
+
+const filled = (m: Record<string, unknown>) =>
+  Object.fromEntries(Object.entries(m).filter(([, v]) => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && !v.length)));
+
+/** Any supported file: hash the original, make a text rendition, validate provenance, store once. */
+export async function captureFile(c: Capture): Promise<DocumentRow> {
+  const bytes = readFileSync(c.sourcePath);
+  const twin = allDocuments().find((d) => d.sha256 === sha256(bytes));
+  if (twin) throw new Error(`This exact original is already in the register as ${twin.id}.`);
+  let meta = filled(c.meta);
+  let body = "";
+  let method: string;
+  let textLayer = true;
+  const raw = bytes.toString("utf8");
+  if (c.rendition) {
+    ({ text: body, method } = c.rendition);
+  } else if (c.ext === "md" && /^---\r?\n/.test(raw)) {
+    const record = parseRecord(raw);
+    meta = { ...record.meta, ...meta };
+    body = record.body;
+    method = "markdown record";
+  } else {
+    try {
+      ({ text: body, method } = await textOf(bytes, c.ext));
+    } catch (e) {
+      if (!(e instanceof NeedsOcr)) throw e;
+      method = `none (${e.message} Needs OCR.)`;
+      textLayer = false;
+    }
+  }
+  meta.id ??= nextDocumentId();
+  if (c.reviewRequired) meta.in_ai_scope = false;
+  const row = toDocumentRow(meta, body, sha256(bytes), c.sourcePath, { allowEmptyBody: !textLayer });
+  return insertDocument(row, c.actor, { text_method: method, text_layer: textLayer, review_required: c.reviewRequired, ...c.payload });
 }

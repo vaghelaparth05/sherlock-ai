@@ -11,7 +11,7 @@ process.env.SHERLOCK_OFFLINE = "1";
 const { seedDemo } = await import("../src/lib/seed.ts");
 const { registerRows, claimDetail, addToScope, rescoreAll, documentDetail } = await import("../src/lib/register.ts");
 const { biasBySubject } = await import("../src/lib/bias.ts");
-const { arrive } = await import("../src/lib/pipeline.ts");
+const { arriveRecord } = await import("../src/lib/pipeline.ts");
 const { decide } = await import("../src/lib/relate.ts");
 const { issueRecalls, recallNotices } = await import("../src/lib/impact.ts");
 const { entriesFor, verifyChain } = await import("../src/lib/ledger.ts");
@@ -52,14 +52,14 @@ test("bias on proof of address: High, then Low once D12 and D20 are in scope", (
   assert.equal(proofOfAddress().rating, "Low");
 });
 
-test("upload D14: trust 24, risk 16 High, blocked", async () => {
-  const { document: d } = await arrive("data/incoming/D14.md", "upload");
-  assert.deepEqual([d.trust, d.risk, d.band, d.gate], [24, 16, "High", "blocked"]);
+test("a contributor uploads D14: trust 24, risk 16 High, blocked, waiting for review", async () => {
+  const { document: d } = await arriveRecord("data/incoming/D14.md", "CSO-014 (contributor)", true);
+  assert.deepEqual([d.trust, d.risk, d.band, d.gate, d.review, d.aiReadable], [24, 16, "High", "blocked", "awaiting", false]);
 });
 
 test("upload D21 and confirm: supersessions, blocks and recalls", async () => {
-  const { document: d, impact } = await arrive("data/incoming/D21.md", "upload");
-  assert.equal(d.gate, "allowed");
+  const { document: d, impact } = await arriveRecord("data/incoming/D21.md", "Priya (information manager)");
+  assert.deepEqual([d.gate, d.review, d.aiReadable], ["allowed", "approved", true]);
   assert.equal(gates().D02, "blocked");
   assert.deepEqual(impact.versions.stillHolds.map((s) => s.answerId), ["A5"]);
   for (const p of impact.proposals.filter((p) => p.type === "supersedes")) {

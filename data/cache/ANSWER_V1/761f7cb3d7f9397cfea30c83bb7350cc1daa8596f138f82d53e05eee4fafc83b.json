@@ -1,0 +1,23 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "ANSWER_V1",
+  "request_sha256": "761f7cb3d7f9397cfea30c83bb7350cc1daa8596f138f82d53e05eee4fafc83b",
+  "created_at": "2026-10-19T02:15:38.395Z",
+  "output": {
+    "sentences": [
+      {
+        "text": "Yes, but only for the $2,000 contents tier; renters may apply for the contents tier only.",
+        "claim_ids": [
+          "D21-C02",
+          "D21-C04"
+        ]
+      },
+      {
+        "text": "Renters who were told before 3 August 2026 that they could not apply may lodge an application under the current guidelines.",
+        "claim_ids": [
+          "D21-C10"
+        ]
+      }
+    ]
+  }
+}

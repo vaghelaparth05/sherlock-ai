@@ -1,0 +1,37 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "8efea5f40241d6e341fe6294a32b3e8dd1d5ff491292bea198f9fcbf2a00e1ef",
+  "created_at": "2026-10-19T02:14:58.021Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "other",
+        "statement": "From Monday 6 July 2026 the grant hotline is open 8 am to 8 pm Monday to Friday and 9 am to 1 pm on Saturdays.",
+        "value": "hotline_hours_mon_fri_8am_8pm_sat_9am_1pm",
+        "scope": "callers to the grant hotline",
+        "effective_from": "2026-07-06",
+        "effective_to": "",
+        "quote": "From Monday 6 July 2026 the grant hotline is open from 8 am to 8 pm, Monday to Friday, and from 9 am to 1 pm on Saturdays."
+      },
+      {
+        "subject": "other",
+        "statement": "Callers who need an interpreter can ask for one at no cost.",
+        "value": "interpreter_free_on_request",
+        "scope": "callers to the grant hotline",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Callers who need an interpreter can ask for one at no cost."
+      },
+      {
+        "subject": "application_fees",
+        "statement": "The department never charges a fee to apply for the grant.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "Please remind callers that the department never charges a fee to apply for the grant."
+      }
+    ]
+  }
+}

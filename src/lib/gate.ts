@@ -7,6 +7,8 @@ export type GateStatus = "allowed" | "blocked" | "quarantined";
 
 export interface GateInput {
   scored: boolean;
+  /** Why an unscored document is quarantined, when it is more than "not yet scored". */
+  unscoredReason?: string;
   tampered: boolean;
   laterDeclaredVersion: boolean;
   claims: ClaimFacts[];
@@ -46,7 +48,7 @@ function blockReason(i: GateInput): { rule: number; reason: string } | null {
 }
 
 export function decideGate(i: GateInput): GateDecision {
-  if (!i.scored) return { status: "quarantined", rule: 1, reason: "Not yet scored." };
+  if (!i.scored) return { status: "quarantined", rule: 1, reason: i.unscoredReason ?? "Not yet scored." };
   const block = blockReason(i);
   if (!block) return { status: "allowed", rule: 6, reason: "Passes every gate rule." };
   const override = i.overrides.filter((o) => o.rule === block.rule).at(-1);

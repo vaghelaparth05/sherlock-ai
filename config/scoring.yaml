@@ -19,6 +19,7 @@ custody:
   team_site: 70
   email: 40
   personal_drive: 40
+  business_system: 80       # a row exported from an operational database through the connector
   external: 10
 
 currency:

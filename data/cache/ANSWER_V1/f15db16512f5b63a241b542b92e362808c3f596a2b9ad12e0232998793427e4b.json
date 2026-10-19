@@ -1,0 +1,14 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "ANSWER_V1",
+  "request_sha256": "f15db16512f5b63a241b542b92e362808c3f596a2b9ad12e0232998793427e4b",
+  "created_at": "2026-10-19T02:15:45.122Z",
+  "output": {
+    "sentences": [
+      {
+        "text": "The records available to me do not cover whether flood damage to a car is eligible for the grant.",
+        "claim_ids": []
+      }
+    ]
+  }
+}

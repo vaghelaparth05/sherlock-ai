@@ -43,3 +43,5 @@ next-env.d.ts
 # Sherlock local data. The corpus, taxonomy and model cache are committed.
 /data/uploads/
 /data/sherlock.db*
+/data/session.key
+/data/demo-records.db*

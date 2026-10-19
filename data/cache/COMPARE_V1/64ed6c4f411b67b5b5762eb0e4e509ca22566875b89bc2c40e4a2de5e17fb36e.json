@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "64ed6c4f411b67b5b5762eb0e4e509ca22566875b89bc2c40e4a2de5e17fb36e",
+  "created_at": "2026-10-19T02:15:51.396Z",
+  "output": {
+    "type": "contradicts",
+    "confidence": 0.8,
+    "rationale": "Both cannot be true for the same applicants: the older notice instructs applicants to pay into a specific account, while the newer final record from a business system states the department never requests transfers. The older notice has unknown origin and status and sits in external custody, so it does not legitimately carry authority and the newer does not formally replace it."
+  }
+}

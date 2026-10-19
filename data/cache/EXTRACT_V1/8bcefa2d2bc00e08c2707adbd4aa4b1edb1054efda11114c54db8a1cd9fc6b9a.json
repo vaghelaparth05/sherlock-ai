@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "8bcefa2d2bc00e08c2707adbd4aa4b1edb1054efda11114c54db8a1cd9fc6b9a",
+  "created_at": "2026-10-19T02:15:48.490Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "application_fees",
+        "statement": "There is no fee to apply for the Riverbend Flood Recovery Grant or to have an application assessed.",
+        "value": "none",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "There is no fee to apply for the Riverbend Flood Recovery Grant or to have an application assessed."
+      },
+      {
+        "subject": "payment_account",
+        "statement": "The department will never ask applicants to transfer money to any account.",
+        "value": "department_never_requests_applicant_transfers",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The department will never ask applicants to transfer money to any account, and anyone who receives such a request should report it to the grant hotline."
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "e30249a1c00a764754c0524ad47588fcc6bbfaf0a614d25c59d1076b6e292183",
+  "created_at": "2026-10-19T02:15:48.285Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "grant_amounts",
+        "statement": "The grant is paid in three tiers: $2,000 for contents, $5,000 for minor structural damage and $10,000 for major structural damage.",
+        "value": "contents:2000;minor_structural:5000;major_structural:10000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The grant is paid in three tiers: $2,000 for contents, $5,000 for minor structural damage and $10,000 for major structural damage."
+      },
+      {
+        "subject": "other",
+        "statement": "An assessment officer decides the tier after reviewing photographs, receipts and, where needed, an inspection.",
+        "value": "assessment_officer_decides_tier_after_reviewing_photos_receipts_and_inspection_if_needed",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "An assessment officer decides the tier after reviewing photographs, receipts and, where needed, an inspection."
+      }
+    ]
+  }
+}

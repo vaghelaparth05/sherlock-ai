@@ -15,6 +15,8 @@ export type LedgerAction =
   | "DISMISS"
   | "CHANGE_RELATIONSHIP"
   | "SCOPE_ADD"
+  | "APPROVE"
+  | "REJECT"
   | "GATE_OVERRIDE"
   | "RECALL_ISSUED"
   | "TAMPER_DETECTED";

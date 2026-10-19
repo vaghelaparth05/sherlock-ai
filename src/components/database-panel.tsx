@@ -17,7 +17,7 @@ type Phase = "idle" | "testing" | "connected" | "error";
 const ENGINES = ["PostgreSQL", "MySQL", "SQLite", "SQL Server"] as const;
 
 export function DatabasePanel({ onImport }: { onImport: (items: ImportItem[]) => void }) {
-  const [engine, setEngine] = useState<(typeof ENGINES)[number]>("PostgreSQL");
+  const [engine, setEngine] = useState<(typeof ENGINES)[number]>("SQLite");
   const [connectionString, setConnectionString] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
@@ -53,23 +53,35 @@ export function DatabasePanel({ onImport }: { onImport: (items: ImportItem[]) =>
     });
   }
 
-  function importPicked() {
-    const items: ImportItem[] = tables
-      .filter((t) => picked.has(t.name))
-      .map((t) => ({
-        id: crypto.randomUUID(),
-        name: t.name,
+  async function importPicked() {
+    setPhase("testing");
+    setError("");
+    try {
+      const res = await fetch("/api/sources/database/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionString, tables: [...picked] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Import failed.");
+      const items: ImportItem[] = (data.documents as { id: string; title: string }[]).map((d) => ({
+        id: d.id,
+        name: d.title,
         size: 0,
         ext: "table",
         origin: "database",
         status: "ready",
         progress: 1,
-        detail: `${engine} · ${t.rows.toLocaleString()} rows · ${t.columns.length} columns`,
+        detail: `${engine} · ${d.id} · scored`,
       }));
-    onImport(items);
-    setPhase("idle");
-    setTables([]);
-    setPicked(new Set());
+      onImport(items);
+      setPhase("idle");
+      setTables([]);
+      setPicked(new Set());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Import failed.");
+      setPhase("error");
+    }
   }
 
   return (
@@ -97,7 +109,7 @@ export function DatabasePanel({ onImport }: { onImport: (items: ImportItem[]) =>
           <input
             value={connectionString}
             onChange={(e) => setConnectionString(e.target.value)}
-            placeholder="postgres://reader:password@db.internal:5432/records"
+            placeholder="sqlite://data/demo-records.db"
             autoComplete="off"
             spellCheck={false}
             className="mt-1.5 w-full rounded-md border border-line-strong bg-bg px-3 py-2 font-mono text-[12.5px] text-fg outline-none transition placeholder:text-faint focus:border-accent"
@@ -117,7 +129,7 @@ export function DatabasePanel({ onImport }: { onImport: (items: ImportItem[]) =>
         </button>
         <button
           type="button"
-          onClick={() => setConnectionString("postgres://reader:demo@records.internal:5432/archive")}
+          onClick={() => setConnectionString("sqlite://data/demo-records.db")}
           className="text-[12.5px] text-muted underline-offset-4 transition hover:text-fg hover:underline"
         >
           Use a demo connection
@@ -148,9 +160,7 @@ export function DatabasePanel({ onImport }: { onImport: (items: ImportItem[]) =>
             <p className="mb-2 flex items-center gap-2 text-[12px] text-muted">
               <span className="size-1.5 rounded-full bg-success" />
               Connected. Choose the tables to bring in.
-              <span className="rounded border border-line px-1.5 py-0.5 text-[10.5px] text-faint">
-                Demo data: no real connection yet
-              </span>
+              <span className="rounded border border-line px-1.5 py-0.5 text-[10.5px] text-faint">Read-only</span>
             </p>
             <ul className="overflow-hidden rounded-lg border border-line">
               {tables.map((t, i) => {

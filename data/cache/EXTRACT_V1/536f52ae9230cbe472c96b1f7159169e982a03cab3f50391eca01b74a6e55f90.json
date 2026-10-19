@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "EXTRACT_V1",
+  "request_sha256": "536f52ae9230cbe472c96b1f7159169e982a03cab3f50391eca01b74a6e55f90",
+  "created_at": "2026-10-19T02:16:38.154Z",
+  "output": {
+    "claims": [
+      {
+        "subject": "income_threshold",
+        "statement": "The household income threshold for the Riverbend Flood Recovery Grant is $120,000.",
+        "value": "120000",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "",
+        "quote": "The household income threshold for the grant is $120,000, following the steering committee decision in May."
+      },
+      {
+        "subject": "application_deadline",
+        "statement": "Applications for the grant close on 31 October 2026.",
+        "value": "2026-10-31",
+        "scope": "all applicants",
+        "effective_from": "",
+        "effective_to": "2026-10-31",
+        "quote": "Applications close on 31 October 2026."
+      }
+    ]
+  }
+}

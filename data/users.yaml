@@ -1,0 +1,12 @@
+# Demo accounts. No passwords: in a real deployment this is the agency's own sign-in (e.g. Entra ID).
+# Staff are shown by role and ID only.
+users:
+  priya:
+    name: Priya
+    role: information_manager
+    title: Information governance manager
+  cso-014:
+    name: CSO-014
+    role: contributor
+    title: Hotline officer
+    unit: Customer Service

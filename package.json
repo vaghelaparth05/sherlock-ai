@@ -10,17 +10,22 @@
     "lint": "eslint",
     "seed": "node --env-file-if-exists=.env.local scripts/seed.ts",
     "test": "node --test \"tests/*.test.ts\"",
-    "arrive": "node --env-file-if-exists=.env.local scripts/arrive.ts"
+    "arrive": "node --env-file-if-exists=.env.local scripts/arrive.ts",
+    "verify": "node --env-file-if-exists=.env.local scripts/verify-ledger.ts",
+    "rebuild": "node --env-file-if-exists=.env.local scripts/rebuild.ts",
+    "rehearse": "node --env-file-if-exists=.env.local scripts/rehearse.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
     "clsx": "^2.1.1",
     "geist": "^1.7.2",
     "lucide-react": "^1.57.0",
+    "mammoth": "^1.13.0",
     "motion": "^14.3.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "unpdf": "^1.9.0",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

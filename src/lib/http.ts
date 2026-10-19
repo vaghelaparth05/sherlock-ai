@@ -21,6 +21,7 @@ export function text(body: Record<string, unknown>, key: string, opts: { min?: n
 
 /** Maps known errors to 400/409 responses; anything else is a 500. */
 export function errorResponse(e: unknown, conflicts: (new (...args: never[]) => Error)[] = []): Response {
+  if (e instanceof Response) return e;
   if (e instanceof BadRequest) return Response.json({ error: e.message }, { status: 400 });
   if (conflicts.some((C) => e instanceof C)) return Response.json({ error: (e as Error).message }, { status: 409 });
   throw e;

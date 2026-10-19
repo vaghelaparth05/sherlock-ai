@@ -1,0 +1,11 @@
+{
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "COMPARE_V1",
+  "request_sha256": "b87d6eef4d341c0569ba73f88da115ad876b09d9374b91e1534adc694f57c579",
+  "created_at": "2026-10-19T02:15:50.785Z",
+  "output": {
+    "type": "different_scope",
+    "confidence": 0.88,
+    "rationale": "The older claim says grants are paid into the applicant's own account, while the newer one says the department never asks applicants to transfer money out to any account. They describe different directions of money flow (payment to applicants vs. requests from applicants), so both can be true."
+  }
+}

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { db, transaction } from "./db.ts";
 import { sha256 } from "./hash.ts";
-import { allEntries, append, entriesFor, type LedgerEntry } from "./ledger.ts";
+import { allEntries, append, entriesFor, verifyChain, type LedgerEntry } from "./ledger.ts";
 import { allDocuments, getDocument, type DocumentRow } from "./ingest.ts";
 import { allClaims, claimsFor } from "./extract.ts";
 import { taxonomy } from "./config.ts";
@@ -58,9 +58,34 @@ export function snapshot() {
   return { docs, claims, docsById, relationships, decided, states: claimStates(claims, docsById, relationships, decided) };
 }
 
-/** Initial scope plus every SCOPE_ADD. */
+export type ReviewStatus = "not_required" | "awaiting" | "approved" | "rejected";
+
+/** A contributor's upload waits for the information manager; APPROVE or REJECT (latest wins) decides. */
+export function reviewOf(doc: DocumentRow) {
+  const entries = entriesFor(doc.id);
+  const ingest = entries.find((e) => e.action === "INGEST");
+  const p = ingest ? JSON.parse(ingest.payload_json) : {};
+  const decision = entries.filter((e) => e.action === "APPROVE" || e.action === "REJECT").at(-1);
+  const status: ReviewStatus = decision
+    ? decision.action === "APPROVE" ? "approved" : "rejected"
+    : p.review_required ? "awaiting" : "not_required";
+  return {
+    status,
+    submittedBy: (p.submitted_by as string | undefined) ?? ingest?.actor ?? null,
+    submittedAt: ingest?.ts_utc ?? null,
+    textMethod: (p.text_method as string | undefined) ?? null,
+    textLayer: p.text_layer !== false,
+    decidedBy: decision?.actor ?? null,
+    decidedAt: decision?.ts_utc ?? null,
+    decisionReason: decision?.reason ?? null,
+  };
+}
+
+/** Initial scope, SCOPE_ADD or an approval, unless the record was rejected. */
 export function inAiScope(doc: DocumentRow): boolean {
-  return doc.in_ai_scope_initial === 1 || entriesFor(doc.id, "SCOPE_ADD").length > 0;
+  const review = reviewOf(doc).status;
+  if (review === "rejected") return false;
+  return doc.in_ai_scope_initial === 1 || review === "approved" || entriesFor(doc.id, "SCOPE_ADD").length > 0;
 }
 
 function overridesFor(id: string): Override[] {
@@ -99,6 +124,7 @@ export function rescoreAll(): void {
       const score = scored ? scoreDocument(facts, cf, today()) : null;
       const gate = decideGate({
         scored,
+        unscoredReason: doc.text ? undefined : "No text layer: the original is held until it is OCR'd.",
         tampered: facts.tampered,
         laterDeclaredVersion: facts.laterDeclaredVersion,
         claims: cf,
@@ -149,6 +175,9 @@ function scoreRow(id: string): ScoreRow | undefined {
 
 function summary(doc: DocumentRow, s: ScoreRow | undefined) {
   const detail = s ? (JSON.parse(s.detail_json) as ScoreDetail) : null;
+  const review = reviewOf(doc);
+  const scope = inAiScope(doc);
+  const gate = s?.gate ?? "quarantined";
   return {
     id: doc.id,
     title: doc.title,
@@ -158,13 +187,18 @@ function summary(doc: DocumentRow, s: ScoreRow | undefined) {
     custody: JSON.parse(doc.custody) as string[],
     recordStatus: doc.record_status,
     date: doc.date,
-    inAiScope: inAiScope(doc),
+    inAiScope: scope,
+    review: review.status,
+    submittedBy: review.submittedBy,
+    submittedAt: review.submittedAt,
+    /** The assistant may read it: in scope and allowed by the gate. */
+    aiReadable: scope && gate === "allowed",
     trust: s?.trust ?? null,
     likelihood: s?.likelihood ?? null,
     consequence: s?.consequence ?? null,
     risk: s?.risk ?? null,
     band: s?.band ?? null,
-    gate: s?.gate ?? "quarantined",
+    gate,
     gateReason: detail?.gate.reason ?? "Not yet scored.",
     overridden: Boolean(detail?.gate.override),
   };
@@ -207,6 +241,7 @@ export function documentDetail(id: string) {
   const ledger: LedgerEntry[] = allEntries().filter((e) => e.target_id === id || claimIds.has(e.target_id));
   return {
     ...summary(doc, s),
+    reviewDetail: reviewOf(doc),
     creator: doc.creator,
     series: doc.series,
     version: doc.version,
@@ -280,4 +315,42 @@ export function addToScope(id: string, actor: string, reason: string) {
   if (inAiScope(doc)) throw new ScopeError(`${id} is already in the assistant's scope.`);
   append({ actor, action: "SCOPE_ADD", targetType: "document", targetId: id, payload: { title: doc.title }, reason });
   return summary(doc, scoreRow(id));
+}
+
+export class ReviewError extends Error {}
+
+/**
+ * The information manager decides on an upload. Approving puts it in the assistant's scope;
+ * approving a blocked record also needs a written reason, recorded as a gate override.
+ */
+export function reviewDocument(id: string, decision: "approve" | "reject", actor: string, reason: string) {
+  const doc = getDocument(id);
+  const s = scoreRow(id);
+  if (!doc || !s) throw new ReviewError(`No document ${id}.`);
+  const gate = (JSON.parse(s.detail_json) as ScoreDetail).gate;
+  if (decision === "approve") {
+    if (gate.status === "quarantined") throw new ReviewError(`${id} is not scored yet (${gate.reason}), so it cannot be approved.`);
+    if (gate.status === "blocked" && reason.length < 10) {
+      throw new ReviewError(`${id} is blocked: ${gate.reason} Approving it overrides the gate, so write a reason of at least 10 characters.`);
+    }
+  }
+  transaction(() => {
+    if (decision === "approve" && gate.status === "blocked") {
+      append({ actor, action: "GATE_OVERRIDE", targetType: "document", targetId: id, payload: { from: "blocked", to: "allowed", rule: gate.rule, blocked_reason: gate.reason }, reason });
+    }
+    append({ actor, action: decision === "approve" ? "APPROVE" : "REJECT", targetType: "document", targetId: id, payload: { gate: gate.status, trust: s.trust, band: s.band }, reason: reason || undefined });
+  });
+  rescoreAll();
+  return documentDetail(id);
+}
+
+/** Re-hashes every original against its hash at ingest, rescores, and checks the ledger chain. */
+export function verifyIntegrity() {
+  const before = allEntries().filter((e) => e.action === "TAMPER_DETECTED").length;
+  rescoreAll();
+  const mismatched = allDocuments()
+    .map((d) => ({ id: d.id, title: d.title, expected: d.sha256, observed: currentHash(d) }))
+    .filter((d) => d.observed !== d.expected);
+  const after = allEntries().filter((e) => e.action === "TAMPER_DETECTED").length;
+  return { documents: allDocuments().length, mismatched, newTamperEntries: after - before, chain: verifyChain() };
 }

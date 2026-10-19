@@ -11,9 +11,8 @@ import { createHash, randomUUID } from "node:crypto";
 
 const ROOT = path.join(process.cwd(), "data", "uploads");
 
-export const ALLOWED_EXTENSIONS = new Set([
-  "pdf", "docx", "doc", "txt", "md", "csv", "xlsx", "xls", "json", "html", "htm", "rtf", "eml",
-]);
+/** Formats Sherlock can read text from (see text.ts), plus images that are held for OCR. */
+export const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "txt", "md", "html", "htm", "eml", "png", "jpg", "jpeg", "tif", "tiff", "heic"]);
 export const MAX_BYTES = 25 * 1024 * 1024;
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -79,6 +78,17 @@ export async function listDocuments(): Promise<StoredDocument[]> {
     }
   }
   return docs.sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+}
+
+/** A staged original and its metadata, or undefined. */
+export async function getStaged(id: string): Promise<(StoredDocument & { path: string }) | undefined> {
+  if (!isValidId(id)) return undefined;
+  try {
+    const doc = JSON.parse(await fs.readFile(path.join(ROOT, `${id}.json`), "utf8")) as StoredDocument;
+    return { ...doc, path: path.join("data", "uploads", `${id}.bin`) };
+  } catch {
+    return undefined;
+  }
 }
 
 export async function deleteDocument(id: string): Promise<boolean> {

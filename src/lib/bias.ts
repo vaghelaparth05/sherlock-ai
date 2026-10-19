@@ -23,7 +23,8 @@ export function rate(gap: boolean, h: number): BiasRating {
   return "Low";
 }
 
-export function biasBySubject() {
+/** `assumeInScope` answers "what if these documents were approved?" for the data card. */
+export function biasBySubject(assumeInScope: string[] = []) {
   const tax = taxonomy();
   const byUnit = scoringConfig().bias.group_by === "unit";
   const docs = new Map(allDocuments().map((d) => [d.id, d]));
@@ -33,20 +34,26 @@ export function biasBySubject() {
     return byUnit ? d.unit : (tax.regions[d.region]?.name ?? "Unknown region");
   };
   const claims = allClaims();
+  const extra = new Set(assumeInScope);
+  const inScope = (id: string) => extra.has(id) || inAiScope(docs.get(id)!);
 
   return Object.entries(tax.subjects).map(([subject, { label }]) => {
     // Only sources the gate allows count, on both sides: a blocked record outside scope is not a usable gap.
     const onSubject = claims.filter((c) => c.subject === subject && gates.get(c.document_id) === "allowed");
-    const inUse = onSubject.filter((c) => inAiScope(docs.get(c.document_id)!));
-    const outside = onSubject.filter((c) => !inAiScope(docs.get(c.document_id)!));
+    const inUse = onSubject.filter((c) => inScope(c.document_id));
+    const outside = onSubject.filter((c) => !inScope(c.document_id));
 
     const counts = new Map<string, number>();
     for (const c of inUse) counts.set(groupOf(c.document_id), (counts.get(groupOf(c.document_id)) ?? 0) + 1);
     const h = concentration([...counts.values()]);
     const shares = [...counts].map(([group, n]) => ({ group, claims: n, share: n / inUse.length })).sort((a, b) => b.share - a.share);
 
+    // A gap is a region (or unit) with relevant records the assistant cannot read and none it can.
     const gapGroups = new Map<string, Set<string>>();
-    for (const c of outside) gapGroups.set(groupOf(c.document_id), (gapGroups.get(groupOf(c.document_id)) ?? new Set()).add(c.document_id));
+    for (const c of outside) {
+      const g = groupOf(c.document_id);
+      if (!counts.has(g)) gapGroups.set(g, (gapGroups.get(g) ?? new Set()).add(c.document_id));
+    }
     const gaps = [...gapGroups].map(([group, ids]) => {
       const units = [...new Set([...ids].map((id) => docs.get(id)!.unit))];
       const serves = [...new Set(units.map((u) => tax.units[u]?.serves).filter(Boolean))].join(" and ");
