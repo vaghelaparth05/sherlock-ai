@@ -1,205 +1,298 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, RotateCcw, X } from "lucide-react";
+import { ArrowUpRight, Check, FileText, RotateCcw, X } from "lucide-react";
 import { TypeBadge } from "@/components/type-badge";
 import { Highlight } from "@/components/results/highlight";
-import { SeverityDot, StatusPill } from "@/components/results/status-pill";
+import { StatusPill } from "@/components/results/status-pill";
 import { CLAIMS, KIND_LABEL, type Finding, type FindingStatus } from "@/lib/results-data";
 import { docById } from "@/lib/results-derive";
 
-const CLAIM_LABEL: Record<string, { label: string; color: string }> = {
-  corroborated: { label: "Corroborated", color: "var(--success)" },
-  current: { label: "Current", color: "var(--success)" },
-  single: { label: "Single source", color: "var(--fg-muted)" },
-  review: { label: "Needs review", color: "var(--misinfo)" },
-  superseded: { label: "Superseded", color: "var(--disinfo)" },
-};
+export interface ReviewEntry {
+  status: "confirmed" | "dismissed";
+  note: string;
+  reviewedAt: string;
+}
 
 export function FindingDrawer({
   finding,
   onClose,
   onDecide,
+  reviewHistory = [],
 }: {
   finding: Finding | null;
   onClose: () => void;
-  onDecide: (id: string, status: FindingStatus) => void;
+  onDecide: (id: string, status: FindingStatus, note?: string) => void;
+  reviewHistory?: ReviewEntry[];
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [noteError, setNoteError] = useState(false);
+
   useEffect(() => {
     if (!finding) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), a[href]'),
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
   }, [finding, onClose]);
+
+  useEffect(() => {
+    setReviewNote("");
+    setNoteError(false);
+  }, [finding?.id]);
+
+  function decide(status: Extract<FindingStatus, "confirmed" | "dismissed">) {
+    const note = reviewNote.trim();
+    if (!note) {
+      setNoteError(true);
+      return;
+    }
+    if (finding) onDecide(finding.id, status, note);
+  }
+
+  const originIds = new Set(
+    finding?.claimIds
+      .map((id) => CLAIMS.find((claim) => claim.id === id)?.origin)
+      .filter((id): id is string => Boolean(id)) ?? [],
+  );
 
   return (
     <AnimatePresence>
       {finding && (
-        <>
+        <motion.div
+          key="finding-dialog-backdrop"
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/40 p-3 backdrop-blur-md sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) onClose();
+          }}
+        >
           <motion.div
-            key="scrim"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-            aria-hidden
-          />
-          <motion.aside
-            key="panel"
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={finding.title}
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 40 }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-line-strong bg-bg shadow-2xl"
+            aria-labelledby="finding-dialog-title"
+            aria-describedby="finding-dialog-summary"
+            tabIndex={-1}
+            initial={{ opacity: 0, y: 14, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.985 }}
+            transition={{ type: "spring", stiffness: 360, damping: 32 }}
+            className="my-auto flex max-h-[min(88dvh,820px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-line-strong bg-bg/95 shadow-2xl shadow-black/25 outline-none backdrop-blur-xl"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-line p-5">
+            <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-7 sm:py-5">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <TypeBadge type={finding.type} />
-                  <span className="rounded border border-line px-1.5 py-0.5 text-[11.5px] text-muted">{KIND_LABEL[finding.kind]}</span>
-                  <SeverityDot severity={finding.severity} />
+                  <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">{KIND_LABEL[finding.kind]}</span>
+                  <StatusPill status={finding.status} />
                 </div>
-                <h2 className="mt-3 text-lg font-semibold leading-snug tracking-tight">{finding.title}</h2>
+                <h2 id="finding-dialog-title" className="mt-3 max-w-3xl text-lg font-semibold leading-snug tracking-tight sm:text-xl">
+                  {finding.title}
+                </h2>
+                <p id="finding-dialog-summary" className="mt-1.5 max-w-3xl text-[13px] leading-relaxed text-muted">
+                  {finding.summary}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
-                className="rounded-md p-1.5 text-muted transition hover:bg-hover hover:text-fg"
+                aria-label="Close finding details"
+                className="shrink-0 rounded-lg border border-line p-2 text-muted transition hover:bg-hover hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 <X className="size-4" />
               </button>
-            </div>
+            </header>
 
-            <div className="flex-1 space-y-6 overflow-y-auto p-5">
-              <section>
-                <p className="text-[13.5px] leading-relaxed text-muted">{finding.summary}</p>
-                <div className="mt-3 flex items-center gap-3 text-[12px] text-faint">
-                  <StatusPill status={finding.status} />
-                  <span>{finding.confidence}% confidence</span>
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[1.35fr_0.85fr]">
+              <section aria-labelledby="evidence-heading" className="min-w-0 px-5 py-5 sm:px-7">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 id="evidence-heading" className="text-sm font-semibold">Evidence from the archive</h3>
+                    <p className="mt-0.5 text-xs text-muted">Review the original excerpts before deciding.</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-elevated px-2.5 py-1 text-[11px] text-muted">{finding.confidence}% AI confidence</span>
                 </div>
-              </section>
 
-              <section>
-                <h3 className="mb-2 text-[12px] font-medium uppercase tracking-wide text-faint">Evidence</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {finding.evidence.map((e, i) => {
-                    const d = e.docId ? docById(e.docId) : undefined;
+                    const doc = e.docId ? docById(e.docId) : undefined;
                     return (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.12 + i * 0.07 }}
-                        className="rounded-lg border border-line bg-subtle p-3"
-                      >
-                        <p className="text-[11px] uppercase tracking-wide text-faint">{e.label}</p>
-                        <p className={e.mono ? "mt-1 font-mono text-[12.5px] leading-snug" : "mt-1 text-[13px] leading-snug"}>
+                      <article key={`${e.docId ?? "archive"}-${i}`} className="rounded-xl border border-line bg-subtle p-4 sm:p-4.5">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <span className="rounded-md bg-elevated px-2 py-1 text-[11px] font-medium text-muted">{e.label}</span>
+                          {doc && <span className="text-[11px] text-faint">{doc.year}</span>}
+                        </div>
+                        <blockquote className={e.mono ? "font-mono text-[12px] leading-relaxed" : "text-[13px] leading-relaxed"}>
                           <Highlight text={e.quote} />
-                        </p>
-                        {d && (
-                          <p className="mt-1.5 text-[11.5px] text-faint">
-                            {d.title} · {d.source} · {d.year}
+                        </blockquote>
+                        {doc && (
+                          <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-2.5 text-[11.5px] text-muted">
+                            <FileText className="size-3.5 shrink-0 text-faint" />
+                            <span className="truncate">{doc.title}</span>
+                            <span className="shrink-0 text-faint">· {doc.source}</span>
                           </p>
                         )}
-                      </motion.div>
+                      </article>
                     );
                   })}
                 </div>
               </section>
 
-              {finding.claimIds.length > 0 && (
-                <section>
-                  <h3 className="mb-2 text-[12px] font-medium uppercase tracking-wide text-faint">Related claims</h3>
-                  <ul className="divide-y divide-line rounded-lg border border-line">
-                    {finding.claimIds.map((id) => {
-                      const c = CLAIMS.find((x) => x.id === id);
-                      if (!c) return null;
-                      const l = CLAIM_LABEL[c.status];
-                      const origin = docById(c.origin);
+              <aside className="border-t border-line bg-subtle/55 px-5 py-5 sm:px-7 lg:border-l lg:border-t-0">
+                <div>
+                  <h3 className="text-sm font-semibold">Document trail</h3>
+                  <p className="mt-0.5 text-xs text-muted">Records connected to this finding.</p>
+                  <ul className="mt-3 space-y-2">
+                    {finding.docIds.map((id, index) => {
+                      const doc = docById(id);
+                      if (!doc) return null;
+                      const isOrigin = originIds.has(id);
                       return (
-                        <li key={id} className="flex items-start justify-between gap-3 p-3">
-                          <div className="min-w-0">
-                            <p className="text-[13px]">{c.text}</p>
-                            <p className="mt-0.5 text-[11.5px] text-faint">
-                              Started in {origin?.title} · stated in {c.citedBy.length} {c.citedBy.length === 1 ? "document" : "documents"}
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-[11.5px]" style={{ color: l.color }}>
-                            {l.label}
+                        <li key={id} className="flex items-center gap-2.5 rounded-lg border border-line bg-bg/75 px-3 py-2.5">
+                          <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${isOrigin ? "bg-accent-soft text-accent" : "bg-elevated text-muted"}`}>
+                            {isOrigin ? "O" : index + 1}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[12px] font-medium">{doc.title}</span>
+                            <span className="block truncate text-[11px] text-faint">{doc.source} · {doc.year}</span>
                           </span>
                         </li>
                       );
                     })}
                   </ul>
-                </section>
-              )}
+                  {originIds.size > 0 && <p className="mt-2 text-[11px] text-faint">O marks the original source of a related claim.</p>}
+                </div>
 
-              <section>
-                <h3 className="mb-2 text-[12px] font-medium uppercase tracking-wide text-faint">
-                  Affected documents ({finding.docIds.length})
-                </h3>
-                <ul className="divide-y divide-line rounded-lg border border-line">
-                  {finding.docIds.map((id) => {
-                    const d = docById(id);
-                    if (!d) return null;
-                    return (
-                      <li key={id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-[13px]">
-                        <span className="truncate">{d.title}</span>
-                        <span className="shrink-0 text-[11.5px] text-faint">
-                          {d.source} · {d.year}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
+                {finding.claimIds.length > 0 && (
+                  <details className="group mt-5 rounded-xl border border-line bg-bg/65 p-3.5">
+                    <summary className="cursor-pointer list-none text-[12px] font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                      Related claims <span className="text-faint">({finding.claimIds.length})</span>
+                    </summary>
+                    <ul className="mt-3 space-y-3 border-t border-line pt-3">
+                      {finding.claimIds.map((id) => {
+                        const claim = CLAIMS.find((item) => item.id === id);
+                        if (!claim) return null;
+                        const origin = docById(claim.origin);
+                        return (
+                          <li key={id} className="text-[12px] text-muted">
+                            <p className="leading-relaxed">{claim.text}</p>
+                            <p className="mt-1 text-[11px] text-faint">
+                              Origin: {origin?.title ?? "Unknown document"} · repeated in {claim.citedBy.length} {claim.citedBy.length === 1 ? "record" : "records"}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                )}
+
+                {finding.status !== "open" && reviewHistory.length > 0 && (
+                  <section className="mt-5 rounded-xl border border-line bg-bg/65 p-3.5" aria-labelledby="decision-history-heading">
+                    <h3 id="decision-history-heading" className="text-[12px] font-semibold text-fg">Review history</h3>
+                    <ul className="mt-2 space-y-3">
+                      {reviewHistory.map((entry, i) => (
+                        <li key={`${entry.reviewedAt}-${i}`} className="border-t border-line pt-2.5 text-[12px] text-muted">
+                          <p className="font-medium text-fg">{entry.status === "confirmed" ? "Approved" : "Rejected"} · {entry.reviewedAt}</p>
+                          <p className="mt-1 leading-relaxed">{entry.note}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </aside>
             </div>
 
-            <div className="border-t border-line p-4">
+            <footer className="border-t border-line bg-bg/90 px-5 py-4 sm:px-7">
               {finding.status === "open" ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onDecide(finding.id, "confirmed")}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-[13.5px] font-medium text-bg transition hover:bg-white active:scale-[0.98]"
-                  >
-                    <Check className="size-4" />
-                    Confirm finding
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDecide(finding.id, "dismissed")}
-                    className="rounded-md border border-line-strong px-4 py-2.5 text-[13.5px] transition hover:bg-hover active:scale-[0.98]"
-                  >
-                    Dismiss
-                  </button>
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <label className="block">
+                    <span className="mb-1.5 block text-[12px] font-medium">Reviewer note <span className="text-danger">Required</span></span>
+                    <textarea
+                      value={reviewNote}
+                      onChange={(event) => {
+                        setReviewNote(event.target.value);
+                        if (event.target.value.trim()) setNoteError(false);
+                      }}
+                      rows={2}
+                      required
+                      aria-invalid={noteError}
+                      aria-describedby={noteError ? "review-note-error" : undefined}
+                      placeholder="Briefly explain your decision…"
+                      className="w-full resize-y rounded-lg border border-line-strong bg-subtle px-3 py-2 text-[12.5px] leading-relaxed outline-none transition placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    />
+                    {noteError && <span id="review-note-error" className="mt-1 block text-[11px] text-danger">Add a note to record this decision.</span>}
+                  </label>
+                  <div className="flex gap-2 sm:pb-px">
+                    <button
+                      type="button"
+                      onClick={() => decide("confirmed")}
+                      disabled={!reviewNote.trim()}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-2.5 text-[13px] font-semibold text-success transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
+                    >
+                      <Check className="size-4" /> Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => decide("dismissed")}
+                      disabled={!reviewNote.trim()}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-line-strong bg-subtle px-4 py-2.5 text-[13px] font-semibold text-muted transition hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => onDecide(finding.id, "open")}
-                    className="inline-flex items-center gap-2 rounded-md border border-line-strong px-3.5 py-2 text-[13px] transition hover:bg-hover active:scale-[0.98]"
-                  >
-                    <RotateCcw className="size-3.5" />
-                    Reopen
-                  </button>
-                  <Link href="/review" className="text-[12.5px] text-muted underline-offset-4 hover:text-fg hover:underline">
-                    Go to review queue
-                  </Link>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-[12px] text-muted">Decision recorded. The information manager has final authority.</p>
+                  <div className="flex items-center gap-4">
+                    <Link href="/review" className="inline-flex items-center gap-1 text-[12px] text-muted transition hover:text-fg">
+                      Review queue <ArrowUpRight className="size-3.5" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => onDecide(finding.id, "open")}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-2 text-[12px] transition hover:bg-hover"
+                    >
+                      <RotateCcw className="size-3.5" /> Reopen
+                    </button>
+                  </div>
                 </div>
               )}
-              <p className="mt-2 text-center text-[11px] text-faint">Sample data: decisions reset when you refresh.</p>
-            </div>
-          </motion.aside>
-        </>
+            </footer>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

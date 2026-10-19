@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/coming-soon";
+import { InvestigationView } from "@/components/investigation-view";
 
-export const metadata = { title: "Scanning · Sherlock.ai" };
+export const metadata = { title: "Investigate documents · Sherlock.ai" };
 
 export default function ScanPage() {
-  return <ComingSoon step="Step 2 of 5" title="The scanning screen comes next" active={1} />;
+  return <InvestigationView />;
 }

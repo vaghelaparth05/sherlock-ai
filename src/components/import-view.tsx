@@ -82,9 +82,29 @@ export function ImportView() {
   const [collection, setCollection] = useState("");
   const [notice, setNotice] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [navigateAfterUpload, setNavigateAfterUpload] = useState(false);
   const [enqueue] = useState(() => createQueue(4));
   const files = useRef(new Map<string, File>());
   const collectionRef = useRef(collection);
+  const startInvestigation = useCallback(() => {
+    const ready = items.filter((item) => item.status === "ready");
+    if (!ready.length) return;
+    try {
+      sessionStorage.setItem("sherlock-investigation", JSON.stringify({
+        collection: collection.trim() || "Untitled collection",
+        documents: ready,
+      }));
+      router.push("/scan");
+    } catch {
+      setNotice("Could not open the investigation. Allow browser storage and try again.");
+    }
+  }, [items, collection, router]);
+
+  useEffect(() => {
+    if (!navigateAfterUpload || !items.length || items.some((item) => item.status !== "ready")) return;
+    const navigation = window.setTimeout(startInvestigation, 250);
+    return () => window.clearTimeout(navigation);
+  }, [navigateAfterUpload, items, startInvestigation]);
   useEffect(() => {
     collectionRef.current = collection;
   }, [collection]);
@@ -177,6 +197,7 @@ export function ImportView() {
       }
       if (skipped) flash(`${skipped} duplicate${skipped > 1 ? "s" : ""} skipped.`);
       if (!fresh.length) return;
+      setNavigateAfterUpload(true);
       setItems((prev) => [...prev, ...fresh]);
       fresh.forEach((f) => send(f.id));
     },
@@ -196,6 +217,7 @@ export function ImportView() {
   );
 
   const clearAll = useCallback(() => {
+    setNavigateAfterUpload(false);
     items
       .filter((i) => i.origin === "upload" && i.status === "ready")
       .forEach((i) => fetch(`/api/documents/${i.id}`, { method: "DELETE" }).catch(() => {}));
@@ -362,7 +384,7 @@ export function ImportView() {
               collection={collection}
               onCollectionChange={setCollection}
               onClear={clearAll}
-              onStart={() => router.push("/scan")}
+              onStart={startInvestigation}
             />
           </motion.div>
         </div>

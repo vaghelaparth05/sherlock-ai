@@ -11,7 +11,7 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
 import { FilterBar } from "@/components/results/filter-bar";
 import { FindingCard } from "@/components/results/finding-card";
-import { FindingDrawer } from "@/components/results/finding-drawer";
+import { FindingDrawer, type ReviewEntry } from "@/components/results/finding-drawer";
 import { SourceList } from "@/components/results/source-list";
 import { TYPE_META } from "@/lib/mock-dashboard";
 import { COLLECTION, DOCS, FINDINGS, type FindingStatus, type FindingType } from "@/lib/results-data";
@@ -19,11 +19,12 @@ import { TYPES, applyFilters, sourceStats, summarise, type Filters } from "@/lib
 
 const DEFAULT_FILTERS: Filters = { type: "all", severity: "all", status: "open", query: "", sort: "severity" };
 
-export function ResultsView() {
+export function ResultsView({ reviewMode = false }: { reviewMode?: boolean }) {
   const [findings, setFindings] = useState(FINDINGS);
   const [view, setView] = useState<"findings" | "sources">("findings");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reviewHistory, setReviewHistory] = useState<Record<string, ReviewEntry[]>>({});
 
   const summary = useMemo(() => summarise(findings), [findings]);
   const visible = useMemo(() => applyFilters(findings, filters), [findings, filters]);
@@ -32,10 +33,22 @@ export function ResultsView() {
 
   const sourceCount = new Set(DOCS.map((d) => d.source)).size;
 
-  const decide = useCallback((id: string, status: FindingStatus) => {
+  const decide = useCallback((id: string, status: FindingStatus, note?: string) => {
     setFindings((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
+    if (status !== "open" && note) {
+      const entry: ReviewEntry = {
+        status,
+        note,
+        reviewedAt: new Date().toLocaleString(),
+      };
+      setReviewHistory((history) => ({
+        ...history,
+        [id]: [...(history[id] ?? []), entry],
+      }));
+    }
     if (status !== "open") setSelectedId(null);
   }, []);
+  const closeFinding = useCallback(() => setSelectedId(null), []);
 
   const tab = view === "sources" ? "sources" : filters.type;
   const tabs: { id: "all" | FindingType | "sources"; label: string; count: number }[] = [
@@ -49,16 +62,17 @@ export function ResultsView() {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[360px]" aria-hidden />
-      <TopNav active={2} />
+      <TopNav active={reviewMode ? 3 : 2} />
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-10">
         <Reveal className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-subtle px-2.5 py-1 text-[12px] text-muted">
               <CircleCheck className="size-3.5 text-success" />
-              {COLLECTION.scannedAt}
+              {reviewMode ? "Review queue" : COLLECTION.scannedAt}
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{COLLECTION.name}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{reviewMode ? "Review findings" : COLLECTION.name}</h1>
+            {reviewMode && <p className="mt-2 text-[14px] text-muted">{COLLECTION.name} · Open a finding to compare evidence and record your decision.</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -68,18 +82,18 @@ export function ResultsView() {
               <FilePlus2 className="size-4" />
               Load new documents
             </Link>
-            <Link
+            {!reviewMode && <Link
               href="/review"
               className="group inline-flex items-center gap-2 rounded-md bg-fg px-4 py-2 text-[13px] font-medium text-bg transition hover:bg-white active:scale-[0.97]"
             >
               Start review
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </Link>}
           </div>
         </Reveal>
 
         {/* Type tiles */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        {!reviewMode && <div className="mt-8 grid gap-3 sm:grid-cols-3">
           {TYPES.map((t, i) => {
             const m = TYPE_META[t];
             const s = summary.byType[t];
@@ -131,7 +145,7 @@ export function ResultsView() {
               </motion.button>
             );
           })}
-        </div>
+        </div>}
 
         <div className="mt-8">
           <section className="min-w-0">
@@ -220,10 +234,15 @@ export function ResultsView() {
 
         </div>
 
-        <p className="pt-10 text-center text-[12px] text-faint">Showing sample data. Real findings appear once scanning is connected.</p>
+        <p className="pt-10 text-center text-[12px] text-faint">{reviewMode ? "Sample review queue. Decisions last for this visit and reset when you leave or reload." : "Showing sample data. Real findings appear once scanning is connected."}</p>
       </main>
 
-      <FindingDrawer finding={selected} onClose={() => setSelectedId(null)} onDecide={decide} />
+      <FindingDrawer
+        finding={selected}
+        onClose={closeFinding}
+        onDecide={decide}
+        reviewHistory={selected ? reviewHistory[selected.id] ?? [] : []}
+      />
     </div>
   );
 }
