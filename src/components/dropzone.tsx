@@ -51,7 +51,7 @@ export function Dropzone({ onFiles }: { onFiles: (files: File[]) => void }) {
 
       <p className="text-[15px] font-medium">{dragging ? "Release to add these documents" : "Drag documents here"}</p>
       <p className="mx-auto mt-1 max-w-sm text-[13px] text-muted">
-        PDF, Word, text, CSV, Excel, JSON or HTML. Up to 25 MB each. Add as many as you like.
+        PDF, Word, text, CSV, JSON or HTML. Up to 25 MB each. Add as many as you like.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">

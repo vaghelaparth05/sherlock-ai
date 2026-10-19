@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ArrowRight, Clock, FilePlus2, FileText } from "lucide-react";
+import { ArrowRight, CheckCheck, Clock, FilePlus2, FileText } from "lucide-react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { ProgressRing } from "@/components/progress-ring";
 import { TypeBadge, TypeIcon } from "@/components/type-badge";
-import { LAST_INVESTIGATION as L, TYPE_META, type FindingType } from "@/lib/mock-dashboard";
+import { timeAgo, withScan } from "@/lib/client";
+import { TYPE_META } from "@/lib/meta";
+import type { DashboardPayload, FindingType } from "@/lib/types";
 
 const ORDER: FindingType[] = ["bias", "misinformation", "disinformation"];
 
-export function ContinueCard() {
-  const openTotal = ORDER.reduce((n, t) => n + L.open[t], 0);
+export function ContinueCard({ last }: { last: NonNullable<DashboardPayload["last"]> }) {
+  const openTotal = ORDER.reduce((n, t) => n + last.open[t], 0);
+  const allDone = openTotal === 0;
+  const progress = last.total ? last.reviewed / last.total : 1;
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-line-strong bg-subtle">
@@ -22,26 +26,25 @@ export function ContinueCard() {
       />
 
       <div className="relative grid gap-8 p-6 sm:p-7 lg:grid-cols-[1fr_1.05fr]">
-        {/* Left: where you are */}
         <div className="flex flex-col">
           <p className="flex items-center gap-2 text-[12px] text-muted">
             <span className="breathe size-1.5 rounded-full bg-accent" />
-            Pick up where you left off
+            {allDone ? "Your most recent investigation" : "Pick up where you left off"}
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight">{L.name}</h2>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight">{last.name}</h2>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
             <span className="inline-flex items-center gap-1.5">
               <FileText className="size-3.5" />
-              {L.documents} documents · {L.sources} sources
+              {last.documents} documents · {last.sources} sources
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Clock className="size-3.5" />
-              Last worked {L.lastWorked}
+              Last worked {timeAgo(last.lastWorked)}
             </span>
           </p>
 
           <div className="mt-6 flex items-center gap-5">
-            <ProgressRing value={L.reviewed / L.total} label="reviewed" />
+            <ProgressRing value={progress} label="reviewed" />
             <div className="text-[13px] text-muted">
               <p>
                 <span className="text-2xl font-semibold tracking-tight text-fg tabular-nums">
@@ -50,7 +53,7 @@ export function ContinueCard() {
                 findings still open
               </p>
               <p className="mt-0.5">
-                {L.reviewed} of {L.total} reviewed so far
+                {last.reviewed} of {last.total} reviewed so far
               </p>
             </div>
           </div>
@@ -70,8 +73,8 @@ export function ContinueCard() {
                   <span style={{ color: m.color }} className="inline-flex">
                     <TypeIcon type={t} className="size-4" />
                   </span>
-                  <p className="mt-2 text-2xl font-semibold leading-none tabular-nums" style={{ color: m.color }}>
-                    <AnimatedNumber value={L.open[t]} />
+                  <p className="mt-2 text-2xl font-semibold leading-none tabular-nums" style={{ color: last.open[t] ? m.color : "var(--fg-faint)" }}>
+                    <AnimatedNumber value={last.open[t]} />
                   </p>
                   <p className="mt-1 text-[11.5px] text-muted">{m.label}</p>
                 </motion.div>
@@ -81,57 +84,69 @@ export function ContinueCard() {
 
           <div className="mt-6 flex flex-wrap items-center gap-2.5">
             <Link
-              href="/review"
+              href={withScan(allDone ? "/summary" : "/review", last.scanId)}
               className="group inline-flex items-center gap-2 rounded-md bg-fg px-4 py-2.5 text-[13.5px] font-medium text-bg transition hover:bg-white active:scale-[0.97]"
             >
-              Continue reviewing
+              {allDone ? "See the summary" : "Continue reviewing"}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <Link
-              href="/results"
-              className="rounded-md border border-line-strong px-3.5 py-2.5 text-[13px] transition hover:bg-hover active:scale-[0.97]"
-            >
+            <Link href={withScan("/results", last.scanId)} className="rounded-md border border-line-strong px-3.5 py-2.5 text-[13px] transition hover:bg-hover active:scale-[0.97]">
               Open results
             </Link>
-            <Link
-              href="/import"
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2.5 text-[13px] text-muted transition hover:text-fg"
-            >
+            <Link href={`/import?collection=${last.collectionId}`} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2.5 text-[13px] text-muted transition hover:text-fg">
               <FilePlus2 className="size-3.5" />
               Add documents
             </Link>
           </div>
         </div>
 
-        {/* Right: the very next finding */}
         <motion.div
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           className="rounded-xl border border-line bg-bg p-5"
         >
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] text-muted">Next up</p>
-            <div className="flex items-center gap-2">
-              <TypeBadge type={L.next.type} />
-              <span className="text-[12px] text-muted tabular-nums">{L.next.confidence}% confidence</span>
+          {last.next ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[12px] text-muted">Next up</p>
+                <div className="flex items-center gap-2">
+                  <TypeBadge type={last.next.type} />
+                  <span className="text-[12px] text-muted tabular-nums">{last.next.confidence}% confidence</span>
+                </div>
+              </div>
+
+              <h3 className="mt-3 text-[17px] font-medium leading-snug tracking-tight">{last.next.title}</h3>
+              <p className="mt-1.5 text-[13px] text-muted">{last.next.summary}</p>
+
+              {last.next.evidence.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {last.next.evidence.map((e, i) => (
+                    <Quote key={i} tone={i === 0 ? "old" : "new"} label={e.label} text={e.text} from={e.from} />
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[12px] text-muted">
+                <span>
+                  Involves {last.next.documents} {last.next.documents === 1 ? "document" : "documents"}
+                </span>
+                <Link href={withScan("/review", last.scanId)} className="text-fg underline-offset-4 hover:underline">
+                  Decide now
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="grid h-full place-items-center py-8 text-center">
+              <div>
+                <span className="mx-auto grid size-10 place-items-center rounded-full bg-success-soft">
+                  <CheckCheck className="size-5 text-success" />
+                </span>
+                <p className="mt-3 text-[15px] font-medium">Everything is reviewed</p>
+                <p className="mt-1 text-[13px] text-muted">Add new documents to check them against what you have already decided.</p>
+              </div>
             </div>
-          </div>
-
-          <h3 className="mt-3 text-[17px] font-medium leading-snug tracking-tight">{L.next.title}</h3>
-          <p className="mt-1.5 text-[13px] text-muted">{L.next.summary}</p>
-
-          <div className="mt-4 space-y-2">
-            <Quote tone="old" label="Older" text={L.next.older.text} from={L.next.older.from} />
-            <Quote tone="new" label="Newer" text={L.next.newer.text} from={L.next.newer.from} />
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[12px] text-muted">
-            <span>Affects {L.next.documents} documents</span>
-            <Link href="/review" className="text-fg underline-offset-4 hover:underline">
-              Decide now
-            </Link>
-          </div>
+          )}
         </motion.div>
       </div>
     </section>
@@ -141,14 +156,11 @@ export function ContinueCard() {
 function Quote({ tone, label, text, from }: { tone: "old" | "new"; label: string; text: string; from: string }) {
   return (
     <div className="flex gap-3 rounded-md border border-line bg-subtle p-3">
-      <span
-        className="mt-0.5 h-auto w-0.5 shrink-0 rounded-full"
-        style={{ background: tone === "old" ? "var(--fg-faint)" : "var(--accent)" }}
-      />
+      <span className="mt-0.5 h-auto w-0.5 shrink-0 rounded-full" style={{ background: tone === "old" ? "var(--fg-faint)" : "var(--accent)" }} />
       <div className="min-w-0">
         <p className="text-[11px] uppercase tracking-wide text-faint">{label}</p>
-        <p className="mt-0.5 text-[13px] leading-snug">{text}</p>
-        <p className="mt-1 text-[11.5px] text-faint">{from}</p>
+        <p className="mt-0.5 line-clamp-3 text-[13px] leading-snug">{text}</p>
+        {from && <p className="mt-1 text-[11.5px] text-faint">{from}</p>}
       </div>
     </div>
   );

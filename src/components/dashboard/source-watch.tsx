@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { SOURCE_WATCH } from "@/lib/mock-dashboard";
+import type { DashboardPayload } from "@/lib/types";
 
 const SEGMENTS = [
   { key: "corroborated", label: "Corroborated", color: "var(--success)" },
@@ -10,7 +10,8 @@ const SEGMENTS = [
   { key: "superseded", label: "Superseded", color: "var(--disinfo)" },
 ] as const;
 
-export function SourceWatch() {
+export function SourceWatch({ items: SOURCE_WATCH }: { items: DashboardPayload["sourceWatch"] }) {
+  if (!SOURCE_WATCH.length) return <p className="text-[13px] text-muted">No sources need attention right now.</p>;
   return (
     <div>
       <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">

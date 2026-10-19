@@ -1,4 +1,4 @@
-import type { FindingStatus, Severity } from "@/lib/results-data";
+import type { FindingStatus, Severity } from "@/lib/types";
 
 const STATUS: Record<FindingStatus, { label: string; color: string; bg: string }> = {
   open: { label: "Needs review", color: "var(--misinfo)", bg: "var(--misinfo-soft)" },

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import type { SourceStat } from "@/lib/results-derive";
+import { withScan } from "@/lib/client";
+import { yearLabel, type SourceStat } from "@/lib/results-derive";
 
 export const RECORD_SEGMENTS = [
   { key: "good", label: "Held up", color: "var(--success)" },
@@ -42,7 +43,7 @@ export function RecordBar({ stat, delay = 0 }: { stat: SourceStat; delay?: numbe
   );
 }
 
-export function SourceList({ stats }: { stats: SourceStat[] }) {
+export function SourceList({ stats, scanId }: { stats: SourceStat[]; scanId?: string | null }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -67,14 +68,14 @@ export function SourceList({ stats }: { stats: SourceStat[] }) {
               className="border-b border-line last:border-b-0"
             >
               <Link
-                href={`/sources/${s.slug}`}
+                href={withScan(`/sources/${s.slug}`, scanId)}
                 className="group grid items-center gap-x-5 gap-y-2 px-4 py-3.5 transition-colors hover:bg-elevated md:grid-cols-[1.2fr_1.2fr_100px_140px_20px]"
               >
                 <div className="min-w-0">
                   <p className="truncate text-[13.5px] font-medium">{s.name}</p>
                   <p className="text-[12px] text-faint">
                     {s.documents.length} {s.documents.length === 1 ? "document" : "documents"} ·{" "}
-                    {s.years[0] === s.years[1] ? s.years[0] : `${s.years[0]} to ${s.years[1]}`}
+                    {s.years[0] === s.years[1] ? yearLabel(s.years[0]) : `${yearLabel(s.years[0])} to ${yearLabel(s.years[1])}`}
                   </p>
                 </div>
 

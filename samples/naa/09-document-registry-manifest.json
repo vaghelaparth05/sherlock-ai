@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "title": "Document registry manifest",
+    "producedBy": "DRIC Records Management Unit",
+    "date": "2024-09-02",
+    "status": "Current",
+    "type": "Registry"
+  },
+  "algorithm": "sha256",
+  "note": "Fingerprints recorded when each document was registered.",
+  "documents": [
+    {
+      "file": "01-records-authority-2024-00561247.md",
+      "sha256": "fc18c80177f3c4926415df9c6bb40447e22c2ae4b8da33425d1d5a1ffcdf608d"
+    },
+    {
+      "file": "02-dric-retention-schedule-2021.md",
+      "sha256": "ecf9693d8191ff65cd2e893c8685c147171f3ac30cfabc571d762d6c6ceb9147"
+    },
+    {
+      "file": "03-dric-information-management-policy-v3.md",
+      "sha256": "d25b2a620b7baf5d046e86e8b9cc284f953a525eda76a2b1d78ae7f31bb0a5af"
+    },
+    {
+      "file": "04-staff-records-guide-2022.md",
+      "sha256": "9b4ee6f68bc10ce08a086a4118ef9feb0fa1872b41d0f3e509a2ca2de89e65f0"
+    },
+    {
+      "file": "05-intranet-records-faq-2023.html",
+      "sha256": "1178a711de86f3ed5b8f259ccf61c1d27b55ac68e7e92373a8b6a413ef4e66e7"
+    },
+    {
+      "file": "06-records-storage-cost-estimate-fy2024-25.md",
+      "sha256": "400716ac40e09cb50e64dc548d76ca43deb70ab9df94d4e7c0b93d2c114f636f"
+    },
+    {
+      "file": "07-records-transfer-register-2024.csv",
+      "sha256": "c9cce92c3ba1b77f7e3938b33616612fe926f3bd9a282b5b716adcee5545c4cb"
+    },
+    {
+      "file": "08-naa-authority-register-extract-2024.csv",
+      "sha256": "00f5e08183d965157c68d788334bb037d0acbc86b5db9308699c137e7128dae1"
+    },
+    {
+      "file": "10-series-description-native-welfare-1987.md",
+      "sha256": "e3bcb4534bee5904f5ef68c9bc03b01a2e0d9c60849e44da404d59cf10b014a6"
+    }
+  ]
+}

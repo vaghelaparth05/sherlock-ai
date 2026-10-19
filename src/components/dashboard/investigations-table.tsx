@@ -2,39 +2,37 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ArrowRight, CircleCheck, LoaderCircle, MessageSquareWarning } from "lucide-react";
-import { INVESTIGATIONS, type InvestigationStatus } from "@/lib/mock-dashboard";
+import { ArrowRight, CircleAlert, CircleCheck, LoaderCircle, MessageSquareWarning } from "lucide-react";
+import { timeAgo, withScan } from "@/lib/client";
+import type { DashboardPayload, InvestigationStatus } from "@/lib/types";
 
-const STATUS: Record<InvestigationStatus, { label: string; color: string; href: string; cta: string }> = {
-  "needs-review": { label: "Needs review", color: "var(--misinfo)", href: "/review", cta: "Resume" },
-  scanning: { label: "Scanning", color: "var(--accent)", href: "/scan", cta: "View" },
-  resolved: { label: "Resolved", color: "var(--success)", href: "/results", cta: "Open" },
+const STATUS: Record<InvestigationStatus, { label: string; color: string; path: string; cta: string }> = {
+  "needs-review": { label: "Needs review", color: "var(--misinfo)", path: "/review", cta: "Resume" },
+  scanning: { label: "Scanning", color: "var(--accent)", path: "/scan", cta: "Watch" },
+  resolved: { label: "Resolved", color: "var(--success)", path: "/results", cta: "Open" },
+  failed: { label: "Scan failed", color: "var(--danger)", path: "/scan", cta: "Details" },
 };
 
 function StatusIcon({ status }: { status: InvestigationStatus }) {
   const cls = "size-3.5";
   if (status === "scanning") return <LoaderCircle className={`${cls} animate-spin`} />;
   if (status === "resolved") return <CircleCheck className={cls} />;
+  if (status === "failed") return <CircleAlert className={cls} />;
   return <MessageSquareWarning className={cls} />;
 }
 
-export function InvestigationsTable() {
+export function InvestigationsTable({ items }: { items: DashboardPayload["investigations"] }) {
   return (
     <ul className="divide-y divide-line">
-      {INVESTIGATIONS.map((inv, i) => {
+      {items.map((inv, i) => {
         const s = STATUS[inv.status];
         return (
-          <motion.li
-            key={inv.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.25 + i * 0.06, duration: 0.4 }}
-          >
-            <Link href={s.href} className="group grid items-center gap-x-4 gap-y-2 py-3.5 sm:grid-cols-[1.6fr_1fr_110px_90px]">
+          <motion.li key={inv.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 + i * 0.06, duration: 0.4 }}>
+            <Link href={withScan(s.path, inv.scanId)} className="group grid items-center gap-x-4 gap-y-2 py-3.5 sm:grid-cols-[1.6fr_1fr_120px_90px]">
               <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-medium">{inv.name}</p>
                 <p className="text-[12px] text-faint">
-                  {inv.documents} documents · {inv.lastActive}
+                  {inv.documents} documents · {inv.status === "scanning" ? "Scanning now" : timeAgo(inv.lastActive)}
                 </p>
               </div>
 

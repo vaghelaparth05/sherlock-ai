@@ -1,16 +1,26 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight, FileText, Sparkles } from "lucide-react";
 import { TypeIcon } from "@/components/type-badge";
 import { StatusPill, SeverityDot } from "@/components/results/status-pill";
-import { TYPE_META } from "@/lib/mock-dashboard";
-import { KIND_LABEL, type Finding } from "@/lib/results-data";
+import { KIND_LABEL, TYPE_META } from "@/lib/meta";
 import { sourceNamesOf } from "@/lib/results-derive";
+import type { Finding, SourceDoc } from "@/lib/types";
 
-export function FindingCard({ finding, onOpen }: { finding: Finding; onOpen: (id: string) => void }) {
+export function FindingCard({
+  finding,
+  docs,
+  showNew,
+  onOpen,
+}: {
+  finding: Finding;
+  docs: SourceDoc[];
+  showNew?: boolean;
+  onOpen: (id: string) => void;
+}) {
   const m = TYPE_META[finding.type];
-  const sources = sourceNamesOf(finding);
+  const sources = sourceNamesOf(finding, docs);
   const resolved = finding.status !== "open";
 
   return (
@@ -34,6 +44,9 @@ export function FindingCard({ finding, onOpen }: { finding: Finding; onOpen: (id
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <span className="text-[14px] font-medium leading-snug">{finding.title}</span>
+            {showNew && finding.isNew && (
+              <span className="rounded-full bg-accent-soft px-1.5 py-px text-[10.5px] font-medium text-accent">New</span>
+            )}
           </span>
           <span className="mt-1 line-clamp-2 block text-[12.5px] leading-relaxed text-muted">{finding.summary}</span>
 
@@ -45,7 +58,20 @@ export function FindingCard({ finding, onOpen }: { finding: Finding; onOpen: (id
               <FileText className="size-3" />
               {finding.docIds.length} {finding.docIds.length === 1 ? "document" : "documents"}
             </span>
-            <span className="hidden truncate sm:inline">{sources.slice(0, 2).join(", ")}{sources.length > 2 ? ` +${sources.length - 2}` : ""}</span>
+            {finding.aiReview && (
+              <span
+                className="inline-flex items-center gap-1"
+                title={finding.aiReview.rationale}
+                style={{ color: finding.aiReview.verdict === "agree" ? "var(--success)" : finding.aiReview.verdict === "disagree" ? "var(--warning)" : "var(--fg-muted)" }}
+              >
+                <Sparkles className="size-3" />
+                AI {finding.aiReview.verdict === "agree" ? "agrees" : finding.aiReview.verdict === "disagree" ? "disagrees" : "unsure"}
+              </span>
+            )}
+            <span className="hidden truncate sm:inline">
+              {sources.slice(0, 2).join(", ")}
+              {sources.length > 2 ? ` +${sources.length - 2}` : ""}
+            </span>
           </span>
         </span>
 

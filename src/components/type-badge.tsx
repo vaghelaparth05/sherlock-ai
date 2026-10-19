@@ -1,5 +1,6 @@
 import { Scale, ShieldAlert, TriangleAlert, Activity } from "lucide-react";
-import { TYPE_META, type FindingType } from "@/lib/mock-dashboard";
+import { TYPE_META } from "@/lib/meta";
+import type { FindingType } from "@/lib/types";
 
 export function TypeIcon({ type, className = "size-3.5" }: { type: FindingType | "system"; className?: string }) {
   if (type === "bias") return <Scale className={className} />;

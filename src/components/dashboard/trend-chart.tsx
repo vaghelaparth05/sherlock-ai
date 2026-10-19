@@ -2,18 +2,18 @@
 
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
-import { TREND } from "@/lib/mock-dashboard";
+import type { DashboardPayload } from "@/lib/types";
 
 const W = 640;
 const H = 220;
 const PAD = { l: 30, r: 12, t: 14, b: 26 };
 
-export function TrendChart() {
+export function TrendChart({ trend: TREND }: { trend: DashboardPayload["trend"] }) {
   const ref = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<number | null>(null);
 
   const n = TREND.labels.length;
-  const max = Math.ceil(Math.max(...TREND.found, ...TREND.resolved) / 5) * 5;
+  const max = Math.max(5, Math.ceil(Math.max(...TREND.found, ...TREND.resolved) / 5) * 5);
   const x = (i: number) => PAD.l + (i / (n - 1)) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
   const line = (data: number[]) => data.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");

@@ -11,7 +11,10 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { TypeBadge } from "@/components/type-badge";
 import { ClaimStatusPill, StatusPill } from "@/components/results/status-pill";
 import { RECORD_SEGMENTS, RecordBar, VERDICT } from "@/components/results/source-list";
-import { docById, type SourceDetail } from "@/lib/results-derive";
+import { ErrorBlock, NoScans, Skeleton } from "@/components/page-states";
+import { useResults, useScanId, withScan } from "@/lib/client";
+import { docLookup, sourceDetail, yearLabel, type SourceDetail } from "@/lib/results-derive";
+import type { SourceDoc } from "@/lib/types";
 
 const EXPLAIN: Record<(typeof RECORD_SEGMENTS)[number]["key"], string> = {
   good: "Corroborated by an independent source, or the current position",
@@ -20,7 +23,8 @@ const EXPLAIN: Record<(typeof RECORD_SEGMENTS)[number]["key"], string> = {
   superseded: "Was correct when written, replaced by newer information",
 };
 
-export function SourceDetailView({ detail }: { detail: SourceDetail }) {
+function Detail({ detail, docs, scanId }: { detail: SourceDetail; docs: SourceDoc[]; scanId: string | null }) {
+  const docById = docLookup(docs);
   const { stat, activity, peakYears, repeatsFrom, related } = detail;
   const v = VERDICT[stat.verdict];
   const maxDocs = Math.max(1, ...activity.map((a) => a.documents));
@@ -36,10 +40,10 @@ export function SourceDetailView({ detail }: { detail: SourceDetail }) {
   return (
     <div className="relative min-h-screen">
       <div className="grid-backdrop pointer-events-none absolute inset-x-0 top-0 h-[340px]" aria-hidden />
-      <TopNav active={2} />
+      <TopNav active="sources" scanId={scanId} />
 
       <main className="relative mx-auto max-w-6xl px-5 pb-24 pt-8">
-        <Link href="/sources" className="inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-fg">
+        <Link href={withScan("/sources", scanId)} className="inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-fg">
           <ArrowLeft className="size-3.5" />
           All sources
         </Link>
@@ -53,7 +57,7 @@ export function SourceDetailView({ detail }: { detail: SourceDetail }) {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{stat.name}</h1>
             <p className="mt-2 text-[14px] text-muted">
               {stat.documents.length} {stat.documents.length === 1 ? "document" : "documents"} ·{" "}
-              {stat.years[0] === stat.years[1] ? stat.years[0] : `${stat.years[0]} to ${stat.years[1]}`}
+              {stat.years[0] === stat.years[1] ? yearLabel(stat.years[0]) : `${yearLabel(stat.years[0])} to ${yearLabel(stat.years[1])}`}
             </p>
           </div>
 
@@ -212,20 +216,20 @@ export function SourceDetailView({ detail }: { detail: SourceDetail }) {
                 {stat.documents.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
                     <span className="truncate">{d.title}</span>
-                    <span className="shrink-0 text-[11.5px] text-faint">{d.year}</span>
+                    <span className="shrink-0 text-[11.5px] text-faint">{yearLabel(d.year)}</span>
                   </li>
                 ))}
               </ul>
             </Panel>
 
-            <Panel title="Related findings" delay={0.32} action={related.length ? { label: "Open results", href: "/results" } : undefined}>
+            <Panel title="Related findings" delay={0.32} action={related.length ? { label: "Open results", href: withScan("/results", scanId) } : undefined}>
               {related.length === 0 ? (
                 <p className="text-[13px] text-muted">No findings involve this source.</p>
               ) : (
                 <ul className="space-y-2.5">
                   {related.map((f) => (
                     <li key={f.id}>
-                      <Link href="/results" className="group block rounded-lg border border-line p-3 transition-colors hover:border-line-strong hover:bg-elevated">
+                      <Link href={withScan("/results", scanId)} className="group block rounded-lg border border-line p-3 transition-colors hover:border-line-strong hover:bg-elevated">
                         <div className="flex items-center justify-between gap-2">
                           <TypeBadge type={f.type} />
                           <StatusPill status={f.status} />
@@ -243,8 +247,38 @@ export function SourceDetailView({ detail }: { detail: SourceDetail }) {
           </div>
         </div>
 
-        <p className="pt-10 text-center text-[12px] text-faint">Showing sample data. Real source records appear once scanning is connected.</p>
+        
       </main>
     </div>
   );
+}
+
+export function SourceDetailView({ slug }: { slug: string }) {
+  const { scanId, ready } = useScanId();
+  const { data, error, loading, reload } = useResults(scanId);
+
+  const shell = (body: React.ReactNode) => (
+    <div className="relative min-h-screen">
+      <TopNav active="sources" scanId={scanId} />
+      <main className="mx-auto max-w-6xl px-5 pb-24 pt-10">{body}</main>
+    </div>
+  );
+
+  if (!ready || (scanId && loading)) return shell(<Skeleton rows={2} />);
+  if (!scanId) return shell(<NoScans />);
+  if (error || !data) return shell(<ErrorBlock message={error ?? "No results."} onRetry={reload} />);
+
+  const detail = sourceDetail(data, slug);
+  if (!detail) {
+    return shell(
+      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-line-strong bg-subtle px-8 py-12 text-center">
+        <h2 className="text-lg font-semibold tracking-tight">Source not found</h2>
+        <p className="mt-1.5 text-[13.5px] text-muted">This scan has no source with that name.</p>
+        <Link href={withScan("/sources", scanId)} className="mt-5 inline-block rounded-md bg-fg px-4 py-2 text-[13px] font-medium text-bg transition hover:bg-white">
+          All sources
+        </Link>
+      </div>,
+    );
+  }
+  return <Detail detail={detail} docs={data.docs} scanId={scanId} />;
 }

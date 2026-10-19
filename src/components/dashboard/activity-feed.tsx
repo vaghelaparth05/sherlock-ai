@@ -2,9 +2,12 @@
 
 import { motion } from "motion/react";
 import { TypeIcon } from "@/components/type-badge";
-import { ACTIVITY, TYPE_META } from "@/lib/mock-dashboard";
+import { timeAgo } from "@/lib/client";
+import { TYPE_META } from "@/lib/meta";
+import type { DashboardPayload } from "@/lib/types";
 
-export function ActivityFeed() {
+export function ActivityFeed({ items: ACTIVITY }: { items: DashboardPayload["activity"] }) {
+  if (!ACTIVITY.length) return <p className="text-[13px] text-muted">Nothing yet. Decisions and scans will appear here.</p>;
   return (
     <ol className="relative space-y-4">
       <span aria-hidden className="absolute bottom-2 left-[13px] top-2 w-px bg-line" />
@@ -28,7 +31,7 @@ export function ActivityFeed() {
             <div className="min-w-0 pt-0.5">
               <p className="text-[13px] leading-snug">{a.text}</p>
               <p className="mt-0.5 text-[11.5px] text-faint">
-                {a.where} · {a.when}
+                {a.where} · {timeAgo(a.at)}
               </p>
             </div>
           </motion.li>

@@ -5,12 +5,14 @@ import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { TypeIcon } from "@/components/type-badge";
-import { OPEN_BY_TYPE, TYPE_META, type FindingType } from "@/lib/mock-dashboard";
+import { withScan } from "@/lib/client";
+import { TYPE_META } from "@/lib/meta";
+import type { FindingType } from "@/lib/types";
 
 const ORDER: FindingType[] = ["misinformation", "bias", "disinformation"];
 
-export function TypeBreakdown() {
-  const total = ORDER.reduce((n, t) => n + OPEN_BY_TYPE[t], 0);
+export function TypeBreakdown({ openByType: OPEN_BY_TYPE, scanId }: { openByType: Record<FindingType, number>; scanId?: string | null }) {
+  const total = ORDER.reduce((n, t) => n + OPEN_BY_TYPE[t], 0) || 1;
 
   return (
     <div>
@@ -32,7 +34,7 @@ export function TypeBreakdown() {
           const m = TYPE_META[t];
           return (
             <li key={t}>
-              <Link href="/review" className="group flex items-center gap-3 py-3">
+              <Link href={withScan("/review", scanId)} className="group flex items-center gap-3 py-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-md" style={{ background: m.soft, color: m.color }}>
                   <TypeIcon type={t} className="size-4" />
                 </span>

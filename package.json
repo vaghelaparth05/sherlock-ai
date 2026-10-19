@@ -6,25 +6,37 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "scan:samples": "tsx scripts/scan-samples.mts",
+    "build:samples": "node scripts/build-samples.mjs",
+    "db:up": "docker compose up -d",
+    "db:reset": "tsx scripts/reset-db.mts",
+    "db:seed": "tsx scripts/seed.mts",
+    "test:incremental": "tsx scripts/test-incremental.mts"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "clsx": "^2.1.1",
     "geist": "^1.7.2",
     "lucide-react": "^1.57.0",
+    "mammoth": "^1.13.0",
     "motion": "^14.3.0",
     "next": "16.4.2",
+    "pg": "^8.23.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

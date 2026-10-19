@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sherlock_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sherlock
+      POSTGRES_PASSWORD: sherlock
+      POSTGRES_DB: sherlock
+    ports:
+      # Host port 5435 keeps this clear of other local Postgres containers (5432, 5436).
+      - "5435:5432"
+    volumes:
+      - sherlock_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sherlock -d sherlock"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # A web viewer for the database: http://localhost:8081
+  # Server: db   Username: sherlock   Password: sherlock   Database: sherlock
+  adminer:
+    image: adminer:latest
+    container_name: sherlock_adminer
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: pepa-linha-dark
+    ports:
+      - "8081:8080"
+
+volumes:
+  sherlock_pgdata:

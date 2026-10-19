@@ -103,3 +103,24 @@ body {
     animation: none;
   }
 }
+
+/* Print: light, no chrome, so the summary can be saved as a PDF */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --bg-subtle: #ffffff;
+    --bg-elevated: #f4f4f4;
+    --bg-hover: #eeeeee;
+    --border: #dddddd;
+    --border-strong: #bbbbbb;
+    --fg: #111111;
+    --fg-muted: #444444;
+    --fg-faint: #666666;
+    color-scheme: light;
+  }
+  header,
+  .no-print,
+  .grid-backdrop {
+    display: none !important;
+  }
+}

@@ -32,12 +32,7 @@ export function FileRow({
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
 }) {
-  const meta =
-    item.origin === "database"
-      ? item.detail
-      : item.origin === "sample"
-        ? `${formatBytes(item.size)} · Sample`
-        : formatBytes(item.size);
+  const meta = formatBytes(item.size);
 
   return (
     <motion.li

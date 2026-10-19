@@ -3,12 +3,19 @@
 import { motion } from "motion/react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { Sparkline } from "@/components/sparkline";
-import { KPIS } from "@/lib/mock-dashboard";
+import type { DashboardPayload } from "@/lib/types";
 
-export function StatCards() {
+export function StatCards({ kpis, trend }: { kpis: DashboardPayload["kpis"]; trend: DashboardPayload["trend"] }) {
+  const cards = [
+    { label: "Open findings", value: kpis.openFindings, note: "Across all investigations", spark: trend.found, color: "var(--misinfo)" },
+    { label: "Resolved this week", value: kpis.resolvedThisWeek, note: "Confirmed or dismissed by you", spark: trend.resolved, color: "var(--success)" },
+    { label: "Documents under watch", value: kpis.documents, note: "In every collection" },
+    { label: "Confirmed by you", value: kpis.agreement, suffix: "%", note: "Share of decisions that confirmed a finding" },
+  ];
+
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {KPIS.map((k, i) => (
+      {cards.map((k, i) => (
         <motion.div
           key={k.label}
           initial={{ opacity: 0, y: 12 }}
@@ -20,12 +27,12 @@ export function StatCards() {
           <p className="text-[12px] text-muted">{k.label}</p>
           <div className="mt-2 flex items-end justify-between gap-2">
             <p className="text-3xl font-semibold leading-none tracking-tight tabular-nums">
-              <AnimatedNumber value={k.value} />
-              {k.suffix && <span className="text-xl text-muted">{k.suffix}</span>}
+              {k.value === null ? <span className="text-faint">–</span> : <AnimatedNumber value={k.value} />}
+              {k.value !== null && k.suffix && <span className="text-xl text-muted">{k.suffix}</span>}
             </p>
-            <Sparkline data={k.spark} color={k.good ? "var(--success)" : "var(--danger)"} />
+            {k.spark && k.spark.some((n) => n > 0) && <Sparkline data={k.spark} color={k.color} />}
           </div>
-          <p className="mt-3 text-[11.5px] text-faint">{k.delta}</p>
+          <p className="mt-3 text-[11.5px] text-faint">{k.note}</p>
         </motion.div>
       ))}
     </div>

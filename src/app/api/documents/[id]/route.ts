@@ -1,13 +1,10 @@
-import { deleteDocument, isValidId } from "@/lib/store";
+import { fail, handle, json } from "@/lib/http";
+import { deleteDocument, isId } from "@/lib/repo";
 
-export async function DELETE(_request: Request, ctx: RouteContext<"/api/documents/[id]">) {
-  const { id } = await ctx.params;
-  if (!isValidId(id)) {
-    return Response.json({ error: "Invalid document id." }, { status: 400 });
-  }
-  const removed = await deleteDocument(id);
-  if (!removed) {
-    return Response.json({ error: "Document not found." }, { status: 404 });
-  }
-  return Response.json({ ok: true });
+export function DELETE(_request: Request, ctx: RouteContext<"/api/documents/[id]">) {
+  return handle(async () => {
+    const { id } = await ctx.params;
+    if (!isId(id)) return fail("Invalid document id.");
+    return (await deleteDocument(id)) ? json({ ok: true }) : fail("Document not found.", 404);
+  });
 }
