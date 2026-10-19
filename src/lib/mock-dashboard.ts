@@ -44,7 +44,7 @@ export const LAST_INVESTIGATION = {
   id: "staff-leave-policy",
   name: "Staff leave policy",
   documents: 12,
-  sources: 8,
+  sources: 9,
   lastWorked: "2 hours ago",
   reviewed: 9,
   total: 15,

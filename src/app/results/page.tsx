@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/coming-soon";
+import { ResultsView } from "@/components/results-view";
 
 export const metadata = { title: "Results · Sherlock.ai" };
 
 export default function ResultsPage() {
-  return <ComingSoon step="Step 3 of 5" title="Results are coming" active={2} />;
+  return <ResultsView />;
 }

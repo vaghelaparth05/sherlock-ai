@@ -82,6 +82,13 @@ body {
   pointer-events: none;
 }
 
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes breathe {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
