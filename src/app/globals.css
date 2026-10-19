@@ -17,6 +17,12 @@
   --warning: #f5a623;
   --danger: #ff4d4f;
   --danger-soft: rgba(255, 77, 79, 0.14);
+  --bias: #8f83f5;
+  --bias-soft: rgba(143, 131, 245, 0.14);
+  --misinfo: #f5a623;
+  --misinfo-soft: rgba(245, 166, 35, 0.14);
+  --disinfo: #ff4d4f;
+  --disinfo-soft: rgba(255, 77, 79, 0.14);
   color-scheme: dark;
 }
 
@@ -74,6 +80,13 @@ body {
   background: linear-gradient(90deg, transparent, rgba(0, 112, 243, 0.16), transparent);
   animation: sweep 1.6s ease-in-out infinite;
   pointer-events: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes breathe {
