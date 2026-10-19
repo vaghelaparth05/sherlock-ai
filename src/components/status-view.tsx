@@ -17,20 +17,25 @@ const REVIEW_DAYS = 2;
 
 export function StatusView() {
   const [docs, setDocs] = useState<ServerDoc[] | null>(null);
+  const [eta, setEta] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/documents")
       .then((r) => r.json())
-      .then((data: { documents: ServerDoc[] }) => !cancelled && setDocs(data.documents))
+      .then((data: { documents: ServerDoc[] }) => {
+        if (cancelled) return;
+        setDocs(data.documents);
+        const earliest = data.documents.length
+          ? data.documents.reduce((a, b) => (a.uploadedAt < b.uploadedAt ? a : b)).uploadedAt
+          : null;
+        setEta(new Date((earliest ? new Date(earliest).getTime() : Date.now()) + REVIEW_DAYS * 86_400_000));
+      })
       .catch(() => !cancelled && setDocs([]));
     return () => {
       cancelled = true;
     };
   }, []);
-
-  const earliest = docs?.length ? docs.reduce((a, b) => (a.uploadedAt < b.uploadedAt ? a : b)).uploadedAt : null;
-  const eta = new Date((earliest ? new Date(earliest).getTime() : Date.now()) + REVIEW_DAYS * 86_400_000);
 
   return (
     <div className="min-h-screen">
@@ -64,7 +69,7 @@ export function StatusView() {
           <span>
             Usually takes up to {REVIEW_DAYS} days. Expected by{" "}
             <strong className="font-semibold">
-              {eta.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+              {eta ? eta.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "…"}
             </strong>
             . We&rsquo;ll show results here once it&rsquo;s done — no need to re-upload.
           </span>
