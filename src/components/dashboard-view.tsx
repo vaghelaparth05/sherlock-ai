@@ -38,20 +38,20 @@ export function DashboardView() {
         <StatCards />
 
         <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
-          <Panel title="Findings over time" description="Found versus resolved, per week" delay={0.15}>
-            <TrendChart />
-          </Panel>
-          <Panel title="Open by type" description="Across all investigations" action={{ label: "Review", href: "/review" }} delay={0.2}>
-            <TypeBreakdown />
-          </Panel>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
           <Panel title="Investigations" description="Everything you have imported" action={{ label: "Import more", href: "/import" }} delay={0.25}>
             <InvestigationsTable />
           </Panel>
           <Panel title="Recent activity" description="Your decisions and Sherlock's flags" delay={0.3}>
             <ActivityFeed />
+          </Panel>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
+          <Panel title="Findings over time" description="Found versus resolved, per week" delay={0.15}>
+            <TrendChart />
+          </Panel>
+          <Panel title="Open by type" description="Across all investigations" action={{ label: "Review", href: "/review" }} delay={0.2}>
+            <TypeBreakdown />
           </Panel>
         </div>
 

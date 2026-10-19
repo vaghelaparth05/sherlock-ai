@@ -1,9 +1,9 @@
 import type { FindingStatus, Severity } from "@/lib/results-data";
 
 const STATUS: Record<FindingStatus, { label: string; color: string; bg: string }> = {
-  open: { label: "Needs review", color: "var(--misinfo)", bg: "var(--misinfo-soft)" },
-  confirmed: { label: "Confirmed", color: "var(--success)", bg: "var(--success-soft)" },
-  dismissed: { label: "Dismissed", color: "var(--fg-muted)", bg: "var(--bg-elevated)" },
+  open: { label: "Needs review", color: "var(--warning)", bg: "var(--warning-soft)" },
+  confirmed: { label: "Approved", color: "var(--success)", bg: "var(--success-soft)" },
+  dismissed: { label: "Rejected", color: "var(--fg-muted)", bg: "var(--bg-elevated)" },
 };
 
 export function StatusPill({ status }: { status: FindingStatus }) {
@@ -38,7 +38,7 @@ const CLAIM: Record<string, { label: string; color: string; bg: string }> = {
   corroborated: { label: "Corroborated", color: "var(--success)", bg: "var(--success-soft)" },
   current: { label: "Current", color: "var(--success)", bg: "var(--success-soft)" },
   single: { label: "Single source", color: "var(--fg-muted)", bg: "var(--bg-elevated)" },
-  review: { label: "Under review", color: "var(--misinfo)", bg: "var(--misinfo-soft)" },
+  review: { label: "Under review", color: "var(--warning)", bg: "var(--warning-soft)" },
   superseded: { label: "Superseded", color: "var(--disinfo)", bg: "var(--disinfo-soft)" },
 };
 
