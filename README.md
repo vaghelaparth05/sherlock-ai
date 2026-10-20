@@ -149,3 +149,18 @@ Sherlock POSTs `{ "name", "ext", "sha256", "text", "base64" }` (`text` is null f
 ## Stack
 
 Next.js 16 (App Router, Cache Components), React 19, Tailwind 4, Motion, Postgres 16, `@google/genai`, zod.
+
+## Hosting on Netlify
+
+The site deploys from GitHub. It needs a hosted Postgres (for example a free Neon database), because Netlify cannot run the Docker one.
+
+1. In Neon, create a project and copy its connection string (it ends in `?sslmode=require`).
+2. In Netlify: Add new site > Import from Git > pick this repository and the branch to deploy. `netlify.toml` sets the build.
+3. Site configuration > Environment variables, add:
+   - `DATABASE_URL` the Neon connection string
+   - `GEMINI_API_KEY` your key (or leave it out to use the offline rules scanner)
+   - `SCAN_RUNNER` = `netlify`
+   - `SCAN_SECRET` a long random string
+4. Deploy. Tables are created on first use.
+
+Scans run in `netlify/functions/scan-background.mts`, a Background Function (up to 15 minutes), because ordinary functions stop when their response is sent. File uploads are limited by Netlify to about 6 MB per request.

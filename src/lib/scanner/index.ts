@@ -78,12 +78,48 @@ export async function startScan(
     return { id, provider: provider.id };
   }
 
+  const fresh = !!opts.fresh;
+  if (process.env.SCAN_RUNNER === "netlify") {
+    // Serverless functions stop when the response is sent, so hand the scan to a Netlify Background Function.
+    try {
+      await triggerBackgroundScan({ scanId: id, collectionId, provider: provider.id, fresh });
+    } catch (e) {
+      await failScan(id, `Could not start the scan: ${(e as Error).message}`).catch(() => {});
+      throw e;
+    }
+    return { id, provider: provider.id };
+  }
+
   // Detached on purpose: the HTTP request returns immediately and the browser polls for progress.
-  void runScan(id, collectionId, provider, !!opts.fresh).catch(async (e) => {
-    console.error("[scan] failed", e);
-    await failScan(id, provider.id === "gemini" ? friendlyGeminiError(e) : (e as Error).message).catch(() => {});
-  });
+  void runScanJob(id, collectionId, provider, fresh);
   return { id, provider: provider.id };
+}
+
+export interface ScanJob {
+  scanId: string;
+  collectionId: string;
+  provider: ProviderChoice;
+  fresh: boolean;
+}
+
+async function triggerBackgroundScan(job: ScanJob) {
+  const secret = process.env.SCAN_SECRET;
+  const base = process.env.URL || process.env.DEPLOY_URL;
+  if (!secret || !base) throw new Error("SCAN_SECRET and the site URL must be set to run scans on Netlify.");
+  const res = await fetch(`${base}/.netlify/functions/scan-background`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-scan-secret": secret },
+    body: JSON.stringify(job),
+  });
+  if (res.status !== 202 && !res.ok) throw new Error(`The scan worker answered ${res.status}.`);
+}
+
+/** Runs a scan that startScan already created. Used by the background worker. */
+export async function runScanJob(scanId: string, collectionId: string, provider: ScanProvider, fresh: boolean) {
+  await runScan(scanId, collectionId, provider, fresh).catch(async (e) => {
+    console.error("[scan] failed", e);
+    await failScan(scanId, provider.id === "gemini" ? friendlyGeminiError(e) : (e as Error).message).catch(() => {});
+  });
 }
 
 async function pool<T, R>(items: T[], size: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
